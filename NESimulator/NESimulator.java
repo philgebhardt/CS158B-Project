@@ -1,4 +1,3 @@
-import java.util.LinkedList;
 import java.util.Scanner;
 
 
@@ -29,7 +28,7 @@ public class NESimulator
 		line = null;
 		while( !(line = in.nextLine()).equals("q") )
 		{
-			System.out.println(line);
+		    //Do nothing
 		}
 	}
 }
