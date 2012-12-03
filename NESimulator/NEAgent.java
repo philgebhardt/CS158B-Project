@@ -1,9 +1,9 @@
 
 public class NEAgent extends Thread
 {
-	OrderedTree<String> data;
+	OrderedTree<OID> data;
 	
-	public NEAgent(OrderedTree<String> data)
+	public NEAgent(OrderedTree<OID> data)
 	{
 		this.data = data;
 	}
@@ -14,7 +14,7 @@ public class NEAgent extends Thread
 	    {
     	    try
     		{
-    		    Thread.sleep(5000);
+    		    Thread.sleep(1000);
     		    
     		}
     	    catch(InterruptedException e)
