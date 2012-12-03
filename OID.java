@@ -20,9 +20,19 @@ public class OID
         return this.name;
     }
     
+    public void setName(String name)
+    {
+        this.name = name;
+    }
+    
     public String getValue()
     {
         return this.value;
+    }
+    
+    public void setValue(String value)
+    {
+        this.value = value;
     }
     
     public boolean isLeaf()
