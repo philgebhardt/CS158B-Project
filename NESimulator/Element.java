@@ -1,11 +1,11 @@
 import java.util.LinkedList;
 import java.util.ListIterator;
-import java.util.NoSuchElementException;
 import java.util.Random;
+import java.util.concurrent.locks.Lock;
 
 public class Element extends Thread
 {
-
+    static final long REFRESH_RATE = 200; //200 milliseconds
     static String[] TCP_OPEN_CONN_STATES =
     { "SYN_SEND", "SYN_RECEIVED", "ESTABLISHED", "LISTEN" };
     static String[] TCP_CLOSE_CONN_STATES =
@@ -13,22 +13,33 @@ public class Element extends Thread
             "CLOSED" };
 
     OrderedTree<OID> tcpConnTable;
-    LinkedList<OID> systemInfo;
-
+    OrderedTree<OID> systemInfo;
+    Lock lock;
+    
     static final Random random = new Random();
 
     public Element()
     {
-        this.tcpConnTable = new OrderedTree<OID>(
-                new OID("TCP_CONN_TABLE", null),
-                new LinkedList<OrderedTree<OID>>());
-        this.systemInfo = new LinkedList<OID>();
+        this.tcpConnTable = new OrderedTree<OID>(new OID("TCP_CONN_TABLE", null), new LinkedList<OrderedTree<OID>>());
+        this.systemInfo = new OrderedTree<OID>(new OID("SYSTEM", null), new LinkedList<OrderedTree<OID>>());
+    }
+    
+    public void giveLock(Lock lock)
+    {
+        this.lock = lock;
+    }
+    
+    public Lock getLockObject()
+    {
+        return lock;
     }
 
     public OrderedTree<OID> agentData()
     {
-
-        return tcpConnTable;
+        LinkedList<OrderedTree<OID>> list = new LinkedList<OrderedTree<OID>>();
+        list.add(systemInfo);
+        list.add(tcpConnTable);
+        return new OrderedTree<OID>(new OID("ROOT", null), list);
     }
 
     @Override
@@ -43,9 +54,11 @@ public class Element extends Thread
             {
                 Thread.currentThread().interrupt();
             }
+            while(lock.tryLock() == false);
             probabilisticInsertion();
             probabilisticRemoval();
             probabilisticModification();
+            lock.unlock();
         }
 
     }
@@ -64,85 +77,75 @@ public class Element extends Thread
 
     void probabilisticRemoval()
     {
-        int p, r;
+        int p;
+        ListIterator<OrderedTree<OID>> iter = tcpConnTable.listIterator();
+        if(!iter.hasNext()) return;
         // Probabilistic Removal
-        p = random.nextInt(100);
-        if (p < 50)
+        while(iter.hasNext())
         {
-            ListIterator<OrderedTree<OID>> iter = tcpConnTable.listIterator();
-            r = random.nextInt(30);
-            while (iter.hasNext())
+            p = random.nextInt(100);
+            OID o = iter.next().getRootData();
+            if(p < 5)
             {
-                if (iter.nextIndex() == r)
+                switch(o.getValue())
                 {
-                    iter.next();
-                    iter.remove();
-                    break;
-                }
-                else
-                {
-                    iter.next();
+                    case "FIN_WAIT":
+                        iter.remove();
+                        break;
+                    case "LISTEN":
+                        iter.remove();
+                        break;
+                    case "CLOSED":
+                        iter.remove();
+                        break;
+                    default:
+                        break;
                 }
             }
         }
     }
 
     void probabilisticModification()
-	{
-	    int p, r, n;
-	    OID oid;
-	    p = random.nextInt(100);
-	    if(p < 75)
-	    {
-	        ListIterator<OrderedTree<OID>> iter = tcpConnTable.listIterator();
-	        n = 0;
-	        while(iter.hasNext())
-	        {
-	            iter.next();
-	            n++;
-	        }
-	        r = n - random.nextInt(n+1);
-	        while(iter.hasPrevious() && r > 1)
-	        {
-	            iter.previous();
-	            r--;
-	        }
-	        
-	        try
-	        {
-	            oid = iter.previous().getRootData();
-	            switch(oid.getValue())
-	            {
-	                //SYN_SEND -> SYN_RECEIVED
-	                case "SYN_SEND":
-	                    oid.setValue("SYN_RECEIVED");
-	                    break;
-	                //SYN_RECEIVED -> ESTABLISHED
-	                case "SYN_RECEIVED":
-	                    oid.setValue("ESTABLISHED");
-	                    break;
-	                //LISTEN -> SYN_RECEIVED or ESTABLISHED
-	                case "LISTEN":
-	                    r = random.nextInt(2) + 1;
-	                    oid.setValue(TCP_OPEN_CONN_STATES[r]);
-	                    break;
-	                //ESTABLISHED -> FIN_WAIT
-	                case "ESTABLISHED":
-	                    oid.setValue("FIN_WAIT");
-	                    break;
-	                //FIN_WAIT -> CLOSED
-	                case "FIN_WAIT":
-	                    oid.setValue("CLOSED");
-	                    break;
-	            }
-	        }
-	        catch(NoSuchElementException e)
-	        {
-	            System.out.println("[ELEMENT] No element error.");
-	            return;
-	        }
-	    }
-	}
+    {
+        int p, r;
+        OID oid;
+        ListIterator<OrderedTree<OID>> iter = tcpConnTable.listIterator();
+        if(!iter.hasNext()) return;
+        
+        //Probabilistic modification
+        while(iter.hasNext())
+        {
+            oid = iter.next().getRootData();
+            p = random.nextInt(100);
+            if(p < 10)
+            {
+                switch (oid.getValue())
+                {
+                    // SYN_SEND -> SYN_RECEIVED
+                    case "SYN_SEND":
+                        oid.setValue("SYN_RECEIVED");
+                        break;
+                    // SYN_RECEIVED -> ESTABLISHED
+                    case "SYN_RECEIVED":
+                        oid.setValue("ESTABLISHED");
+                        break;
+                    // LISTEN -> SYN_RECEIVED or ESTABLISHED
+                    case "LISTEN":
+                        r = random.nextInt(2) + 1;
+                        oid.setValue(TCP_OPEN_CONN_STATES[r]);
+                        break;
+                    // ESTABLISHED -> FIN_WAIT
+                    case "ESTABLISHED":
+                        oid.setValue("FIN_WAIT");
+                        break;
+                    // FIN_WAIT -> CLOSED
+                    case "FIN_WAIT":
+                        oid.setValue("CLOSED");
+                        break;
+                }
+            }
+        }
+    }
 
     static OID createRandomTCP_OID()
     {
