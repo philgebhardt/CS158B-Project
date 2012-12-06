@@ -10,6 +10,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -25,7 +26,6 @@ import javax.swing.JPasswordField;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.WindowConstants;
-
 
 public class Client extends JFrame{
 	
@@ -71,31 +71,53 @@ public class Client extends JFrame{
     String agentString;
     String communityString;
     String oidString;
+    String authString;
     
     ArrayList<TreeNode> list;
 	
 	public Client(String title)
 	{
 		super(title);
+
+		initializeStrings();
+		initializePanels();
+	    initializeLabels();
+	    initializeInputFields();
+	    initializeTextAreas();
+	    initializeTreeTable();
+	    setButtons();
+	    setLayoutandBackgrounds();
+	    combineEverything();
 		setFrame();
 	}
 	public void setFrame()
 	{	
+	    setSize(850, 700);
+		setVisible(true);
+		setResizable(false);
+		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+	}
+	
+	private void initializeStrings()
+	{
 		rmonString = "";
 	    agentString = "";
 	    communityString = "";
 	    oidString = "";
-		
+	}
+	private void initializePanels()
+	{
 	    north1 = new JPanel();
 	    north2 = new JPanel();
 	    north = new JPanel();
 	    west = new JPanel();
 	    center = new JPanel();
 	    south = new JPanel();
-	    east = new JPanel();
-	    
-
-	    userLabel = new JLabel("User Name: ");
+	    east = new JPanel();;
+	}
+	private void initializeLabels()
+	{
+		userLabel = new JLabel("User Name: ");
 	    passwordLabel = new JLabel("Password: ");
 	    agentAddress = new JLabel("Agent");
 	    rmonAddress = new JLabel("RMON");
@@ -103,9 +125,10 @@ public class Client extends JFrame{
 	    oid = new JLabel("OID");
 	    textLog = new JLabel("LOG");
 	    mibTree = new JLabel("MIB Tree");
-	    
-
-	    userInput = new JTextField();
+	}
+	private void initializeInputFields()
+	{
+		userInput = new JTextField();
 	    userInput.setPreferredSize(new Dimension(145, 25));
 	    passwordInput = new JPasswordField();
 	    passwordInput.setPreferredSize(new Dimension(145, 25));
@@ -117,14 +140,18 @@ public class Client extends JFrame{
 	    rmonInput.setPreferredSize(new Dimension(145, 25));
 	    commInput = new JTextField();
 	    commInput.setPreferredSize(new Dimension(145, 25));
-	   
-	    log = new JTextArea();
+	}
+	private void initializeTextAreas()
+	{
+		log = new JTextArea();
 	    log.setEditable(false);
 	    treeDisplay = new JPanel();
 	    treeDisplay.setPreferredSize(new Dimension(160, 555));
 	    treeDisplay.setLayout(new BoxLayout(treeDisplay, BoxLayout.Y_AXIS));
-	    
-	    list = new ArrayList<TreeNode>();
+	}
+	private void initializeTreeTable()
+	{
+		list = new ArrayList<TreeNode>();
 	    list.add(new TreeNode("- tcpConnTable", "0"));
 	    list.add(new TreeNode("   - tcpConnEntry", "0.0"));
 	    list.add(new TreeNode("      - tcpConnState", "0.0.0"));
@@ -142,99 +169,44 @@ public class Client extends JFrame{
 	        });
 	    	treeDisplay.add(nextNode.getLabel());
 	    }
-	    
-	    
-	    
-	    get = new JButton("GET");
+	}
+	private void setButtons()
+	{
+		get = new JButton("GET");
 	    get.addActionListener(new ActionListener() {
- 
-            public void actionPerformed(ActionEvent e)
-            {
-            	userString = userInput.getText();
-            	passwordString = passwordInput.getPassword().toString();
-            	try
-            	{
-            		MessageDigest m = MessageDigest.getInstance("MD5");
-            		m.reset();
-            		m.update(passwordString.getBytes(), 0, passwordString.length());
-            		byte messageDigest[] = m.digest();
-            		StringBuffer hexString = new StringBuffer();
-            		for(int i = 0; i < messageDigest.length;i++)
-            			hexString.append(Integer.toHexString(0xFF & messageDigest[i]));
-            		updateLog(passwordString + ": " + hexString.toString());
-            	}
-            	catch(NoSuchAlgorithmException n)
-            	{
-            	}
-            	
-            	
-            	rmonString = rmonInput.getText();
-        	    agentString = agentInput.getText();
-        	    communityString = commInput.getText();
-        	    oidString = oidInput.getText();
-                updateLog("get " + oidInput.getText() + "...");
-                if (rmonString.isEmpty() == false && agentString.isEmpty())
-                	updateLog(communicate("get " + communityString + " " + oidString, rmonString));
-                else if (rmonString.isEmpty() && agentString.isEmpty() == false)
-                	updateLog(communicate("get " + communityString + " " + oidString, agentString));
-                done();
-            }
-        }); 
+	    	 
+	        public void actionPerformed(ActionEvent e)
+	        {   		
+	        	sendRequest("get");
+	        }
+	    }); 
 	    set = new JButton("SET");
 	    set.addActionListener(new ActionListener() {
 	    	 
-            public void actionPerformed(ActionEvent e)
-            {
-            	rmonString = rmonInput.getText();
-        	    agentString = agentInput.getText();
-        	    communityString = commInput.getText();
-        	    oidString = oidInput.getText();
-            	updateLog("set " + oidInput.getText() + "...");
-
-            	 if (rmonString.isEmpty() == false && agentString.isEmpty())
-            		 updateLog(communicate("set " + communityString + " " + oidString, rmonString));
-                 else if (rmonString.isEmpty() && agentString.isEmpty() == false)
-                   	 updateLog(communicate("set " + communityString + " " + oidString, agentString));
-            	done();
-            }
-        }); 
+	        public void actionPerformed(ActionEvent e)
+	        {
+	        	sendRequest("set");
+	        }
+	    }); 
 	    walk = new JButton("WALK");
 	    walk.addActionListener(new ActionListener() {
 	    	 
-            public void actionPerformed(ActionEvent e)
-            {
-            	rmonString = rmonInput.getText();
-        	    agentString = agentInput.getText();
-        	    communityString = commInput.getText();
-        	    oidString = oidInput.getText();
-            	updateLog("walk " + oidInput.getText() + "...");
-
-            	 if (rmonString.isEmpty() == false && agentString.isEmpty())
-            		 updateLog(communicate("walk " + communityString + " " + oidString, rmonString));
-                 else if (rmonString.isEmpty() && agentString.isEmpty() == false)
-                 	 updateLog(communicate("walk " + communityString + " " + oidString, agentString));
-            	done();
-            }
-        }); 
+	        public void actionPerformed(ActionEvent e)
+	        {
+	        	sendRequest("walk");
+	        }
+	    }); 
 	    trap = new JButton("TRAP");
 	    trap.addActionListener(new ActionListener() {
 	    	 
-            public void actionPerformed(ActionEvent e)
-            { 
-            	rmonString = rmonInput.getText();
-        	    agentString = agentInput.getText();
-        	    communityString = commInput.getText();
-        	    oidString = oidInput.getText();
-            	updateLog("trap " + oidInput.getText() + "...");
-
-            	 if (rmonString.isEmpty() == false && agentString.isEmpty())
-            		 updateLog(communicate("trap " + communityString + " " + oidString, rmonString));
-                 else if (rmonString.isEmpty() && agentString.isEmpty() == false)
-                 	 updateLog(communicate("trap " + communityString + " " + oidString, agentString));
-            	done();
-            }
-        }); 
-
+	        public void actionPerformed(ActionEvent e)
+	        { 
+	        	sendRequest("trap");
+	        }
+	    });
+	}
+	private void setLayoutandBackgrounds()
+	{
 	    west.setLayout(new BoxLayout(west, BoxLayout.Y_AXIS));
 	    west.setBackground(Color.GRAY);
 	    center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
@@ -248,6 +220,9 @@ public class Client extends JFrame{
 	    south.setLayout(new FlowLayout());
 	    south.setBackground(Color.GRAY);
 	    east.setBackground(Color.GRAY);
+	}
+	private void combineEverything()
+	{
 
 		north1.add(userLabel);
 		north1.add(userInput);
@@ -281,11 +256,6 @@ public class Client extends JFrame{
 	    add(center, BorderLayout.CENTER);
 	    add(south, BorderLayout.SOUTH);
 	    add(east, BorderLayout.EAST);
-	    
-	    setSize(850, 700);
-		setVisible(true);
-		setResizable(false);
-		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 	}
 	
 	private void updateLog(String toAppend)
@@ -298,6 +268,29 @@ public class Client extends JFrame{
 		updateLog("done!" + newline);
 		
 	}
+	
+	private String prepAuthentication(String name, String password)
+	{
+    	try
+    	{
+    		MessageDigest m = MessageDigest.getInstance("MD5");
+    		StringBuilder hashedPass = new StringBuilder();;
+    		byte[] input1 = password.getBytes("UTF-16");
+    		byte[] hash1 = m.digest(input1);
+    		for(int i = 0; i < hash1.length; i++)
+    			hashedPass.append(" " + hash1[i]);
+    		return ("auth name: " + name + "password:" + hashedPass.toString());
+    	}
+    	catch(NoSuchAlgorithmException n)
+    	{
+        	return "";
+    	}
+    	catch(UnsupportedEncodingException e)
+    	{
+    		return "";
+    	}
+	}
+	
 	private String communicate(String command, String ipString)
 	{
 		Socket echoSocket = null;
@@ -333,5 +326,26 @@ public class Client extends JFrame{
         	System.out.println("Couldn't get I/O for the connection to: " + command);
         }
         return report;
+	}
+
+	private void sendRequest(String command)
+	{
+		authString = prepAuthentication(userInput.getText(), passwordInput.getPassword().toString());
+    	rmonString = rmonInput.getText();
+	    agentString = agentInput.getText();
+	    communityString = commInput.getText();
+	    oidString = oidInput.getText();
+        updateLog("get " + oidInput.getText() + "...");
+        if (rmonString.isEmpty() == false && agentString.isEmpty())
+        {
+    		updateLog(communicate(authString, rmonString));
+        	updateLog(communicate(command + " " + communityString + " " + oidString, rmonString));
+        }
+        else if (rmonString.isEmpty() && agentString.isEmpty() == false)
+        {
+    		updateLog(communicate(authString, agentString));
+        	updateLog(communicate(command + " " + communityString + " " + oidString, agentString));
+        }
+        done();
 	}
 }
