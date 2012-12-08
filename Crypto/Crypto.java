@@ -1,4 +1,5 @@
 package Crypto;
+
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -15,6 +16,24 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class Crypto
 {
+    /**
+     * Encrypts a string using the AES algorithm in CBC mode with PKCS5Padding. 
+     * This encryption uses the key bytes specified by key, and the initialization
+     * vector bytes specified by iv.
+     * 
+     * @param message - plaintext
+     * @param key - key
+     * @param iv - initialization vector
+     * @return the encrypted message
+     * 
+     * @throws NoSuchAlgorithmException
+     * @throws NoSuchPaddingException
+     * @throws InvalidKeyException
+     * @throws InvalidAlgorithmParameterException
+     * @throws ShortBufferException
+     * @throws IllegalBlockSizeException
+     * @throws BadPaddingException
+     */
     public static String AESCBCencrypt(String message, Key key, byte[] iv)
             throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException,
             ShortBufferException, IllegalBlockSizeException, BadPaddingException
@@ -39,6 +58,23 @@ public class Crypto
         return new String(ciphertext);
     }
     
+    /**
+     * Decrypts a string using the AES algorithm in CBC mode with PKCS5Padding. 
+     * This decryption uses the key bytes specified by key, and the initialization
+     * vector bytes specified by iv.
+     * 
+     * @param ciphertext - encrypted message
+     * @param key - key
+     * @param iv - initialization vector
+     * @return the decrypted message
+     * @throws NoSuchAlgorithmException
+     * @throws NoSuchPaddingException
+     * @throws InvalidKeyException
+     * @throws InvalidAlgorithmParameterException
+     * @throws ShortBufferException
+     * @throws IllegalBlockSizeException
+     * @throws BadPaddingException
+     */
     public static String AESCBCdecrypt(String ciphertext, Key key, byte[] iv)
     		throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException,
     		ShortBufferException, IllegalBlockSizeException, BadPaddingException
@@ -63,6 +99,15 @@ public class Crypto
         return new String(plaintext);
     }
     
+    /**
+     * Generates an initialization vector, an array of length
+     * byteLength. This array is randomized by the Random class
+     * with the seed specified by the input parameter seed.
+     * 
+     * @param seed - seed for randomization
+     * @param byteLength - length of byte array
+     * @return array of random bytes
+     */
     public static byte[] generateIV(int seed, int byteLength)
     {
     	byte[] iv = new byte[byteLength];
