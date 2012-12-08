@@ -1,5 +1,6 @@
-import javax.swing.JLabel;
+package Client;
 
+import javax.swing.JLabel;
 
 public class TreeNode {
 	private JLabel textLabel;
