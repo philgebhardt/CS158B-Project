@@ -1,3 +1,4 @@
+package NESimulator;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,6 +13,8 @@ import java.util.Scanner;
 import java.util.StringTokenizer;
 import java.util.concurrent.locks.Lock;
 
+import Crypto.Key;
+import Structure.*;
 
 public class NESimulator
 {

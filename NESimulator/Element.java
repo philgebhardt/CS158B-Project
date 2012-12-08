@@ -1,7 +1,10 @@
+package NESimulator;
 import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.Random;
 import java.util.concurrent.locks.Lock;
+
+import Structure.*;
 
 public class Element extends Thread
 {

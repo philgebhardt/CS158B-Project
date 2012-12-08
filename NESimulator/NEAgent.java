@@ -1,3 +1,4 @@
+package NESimulator;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -9,6 +10,8 @@ import java.util.ListIterator;
 import java.util.StringTokenizer;
 import java.util.concurrent.locks.Lock;
 
+import Crypto.*;
+import Structure.*;
 
 public class NEAgent extends Thread
 {
