@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.math.BigInteger;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.*;
@@ -71,7 +70,7 @@ public class Client extends JFrame{
     String agentString;
     String communityString;
     String oidString;
-    String authString;
+    String communicationString;
     
     ArrayList<TreeNode> list;
 	
@@ -269,26 +268,29 @@ public class Client extends JFrame{
 		
 	}
 	
-	private String prepAuthentication(String name, String password)
+	private String prepAuthentication(String name, byte[] iv)
+	{
+    		StringBuilder ivString = new StringBuilder();
+    		for(int i = 0; i < iv.length; i++)
+    			ivString.append(" " + iv[i]);
+    		return (name + ivString.toString());
+	}
+	
+	private String prepMessage(String password, String message, byte[] iv)
 	{
     	try
     	{
     		MessageDigest m = MessageDigest.getInstance("MD5");
-    		StringBuilder hashedPass = new StringBuilder();;
     		byte[] input1 = password.getBytes("UTF-16");
     		byte[] hash1 = m.digest(input1);
-    		for(int i = 0; i < hash1.length; i++)
-    			hashedPass.append(" " + hash1[i]);
-    		return ("auth name: " + name + "password:" + hashedPass.toString());
+    		Key key = new Key(hash1);
+    		return (" " + Crypto.AESCBCencrypt(message, key, iv));
     	}
-    	catch(NoSuchAlgorithmException n)
-    	{
-        	return "";
-    	}
-    	catch(UnsupportedEncodingException e)
-    	{
-    		return "";
-    	}
+    	catch(Exception e)
+		{
+			System.err.format("Bad encryption: %s%n", e.getMessage());
+			return "";
+		}
 	}
 	
 	private String communicate(String command, String ipString)
@@ -330,22 +332,34 @@ public class Client extends JFrame{
 
 	private void sendRequest(String command)
 	{
-		authString = prepAuthentication(userInput.getText(), passwordInput.getPassword().toString());
-    	rmonString = rmonInput.getText();
+		rmonString = rmonInput.getText();
 	    agentString = agentInput.getText();
 	    communityString = commInput.getText();
 	    oidString = oidInput.getText();
+		byte[] iv = Crypto.generateIV(0, 16);
+	    
+		communicationString = prepAuthentication(userInput.getText(), iv);
+		
+		if(command.equals("get"))
+			communicationString += prepMessage(passwordInput.getPassword().toString(),
+					"get " + communityString + " " + oidString, iv);
+		else if (command.equals("set"))
+			communicationString += prepMessage(passwordInput.getPassword().toString(),
+					"set " + communityString + " " + oidString, iv);
+		else if (command.equals("walk"))
+			communicationString += prepMessage(passwordInput.getPassword().toString(),
+					"walk " + communityString + " " + oidString, iv);
+		else
+			communicationString += prepMessage(passwordInput.getPassword().toString(),
+					"trap " + communityString + " " + oidString, iv);
+		
         updateLog("get " + oidInput.getText() + "...");
-        if (rmonString.isEmpty() == false && agentString.isEmpty())
-        {
-    		updateLog(communicate(authString, rmonString));
-        	updateLog(communicate(command + " " + communityString + " " + oidString, rmonString));
-        }
-        else if (rmonString.isEmpty() && agentString.isEmpty() == false)
-        {
-    		updateLog(communicate(authString, agentString));
-        	updateLog(communicate(command + " " + communityString + " " + oidString, agentString));
-        }
+        if (rmonString.isEmpty() == false)
+        	updateLog(communicate(communicationString, rmonString));
+        else if (agentString.isEmpty() == false)
+        	updateLog(communicate(communicationString, agentString));
+        else
+        	updateLog("Please enter destination address");
         done();
 	}
 }
