@@ -4,7 +4,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.LinkedList;
+import java.util.HashMap;
 import java.util.ListIterator;
 import java.util.StringTokenizer;
 import java.util.concurrent.locks.Lock;
@@ -13,24 +13,25 @@ import java.util.concurrent.locks.Lock;
 public class NEAgent extends Thread
 {
 	public static final int REQUEST_ARG = 0;
-	public static final int COMMUNITY_ARG = 1;
-	public static final int OID_ARG = 2;
-	public static final int VALUE_ARG = 3;
+	public static final int OID_ARG = 1;
+	public static final int VALUE_ARG = 2;
+	
+	public static int seed = 0;
 	
 	private Lock lock;
 	private OrderedTree<OID> data;
-	private LinkedList<User> users;
+	private HashMap<String, User> users;
 	
 	public NEAgent(OrderedTree<OID> data)
 	{
 	    this.lock = null;
 		this.data = data;
-		this.users = new LinkedList<User>();
+		this.users = new HashMap<String, User>();
 	}
 	
 	public void addUser(User user)
 	{
-	    users.add(user);
+	    users.put(user.getName(), user);
 	}
 	
 	public void giveLock(Lock lock)
@@ -71,13 +72,48 @@ public class NEAgent extends Thread
 	            out = new PrintWriter(clientSocket.getOutputStream(), true);
 	            in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 	            
-	            //Input format [get/set/walk/trap] community_string OID
+	            //INPUT FORMAT: username iv E("[get/set/walk/trap] OID {value}", userKey)
 	            if( (inputLn = in.readLine()) != null)
 	            {
-	                while(lock.tryLock() == false);
-	                outputLn = process(inputLn);
-	                lock.unlock();
-	                out.println(outputLn);
+	                User user;
+	                int delim = inputLn.indexOf(' '); 
+	                String userString = inputLn.substring(0, delim);
+	                //Authenticate user
+	                if( (user = authenticate(userString)) != null)
+	                {
+	                    delim++;
+	                    byte[] iv = inputLn.substring(delim, delim+16).getBytes();
+	                    String message = inputLn.substring(delim+16);
+	                    try
+	                    {
+	                        message = Crypto.AESCBCdecrypt(message, user.getKey(), iv);
+	                    }
+	                    catch(Exception e)
+	                    {
+	                        System.err.format("Encryption failed: %s%n", e.getMessage());
+	                        System.exit(-1);
+	                    }
+	                    
+	                    while(lock.tryLock() == false);
+	                    outputLn = process(message);
+	                    lock.unlock();
+	                    iv = Crypto.generateIV(seed++, 16);
+	                    
+	                    try
+	                    {
+	                        outputLn = "" + iv + Crypto.AESCBCencrypt(outputLn, user.getKey(), iv);
+	                    }
+	                    catch(Exception e)
+                        {
+                            System.err.format("Decryption failed: %s%n", e.getMessage());
+                            System.exit(-1);
+                        }
+	                }
+	                else
+	                {
+	                    outputLn = "Failed to authenticate user: " + userString;
+	                    out.println(outputLn);
+	                }
 	            }
 	        }
 	        catch(IOException e)
@@ -116,8 +152,7 @@ public class NEAgent extends Thread
             String[] args = new String[n];
             OID oid;
             for(int i = 0; i < n; i++) args[i] = st.nextToken();
-            
-            //Authenticate
+
             //Find OID(s)
             oid = data.get(args[OID_ARG]);
             //Determine request type
@@ -174,4 +209,15 @@ public class NEAgent extends Thread
 	    }
 	}
 	
+	private User authenticate(String username)
+	{
+	    if(users.containsKey(username))
+	    {
+	        return users.get(username);
+	    }
+	    else
+	    {
+	        return null;
+	    }
+	}
 }

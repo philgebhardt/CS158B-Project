@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
+import java.util.Scanner;
 import java.util.StringTokenizer;
 import java.util.concurrent.locks.Lock;
 
@@ -20,18 +21,35 @@ public class NESimulator
     
 	public static void main(String args[])
 	{
+	    String line;
+	    Scanner in;
+	    StringTokenizer st;
+	    
 	    pullConfigInfo();
-	    for(User u : users)
-	    {
-	        System.out.println(u.toString());
-	    }
 	    initializeThreads();
 	    initializeUsers();
 		startThreads();
+		
 		//Run simulator
-		while( true )
+		in = new Scanner(System.in);
+		while( (line = in.nextLine()) != null )
 		{
-		    //Do nothing
+		    st = new StringTokenizer(line, " ");
+		    if(!st.hasMoreTokens()) continue;
+		    switch(st.nextToken())
+		    {
+    		    case "config":
+    		        configureAgent();
+    		        break;
+    		    case "stat":
+    		        agentStatistics();
+    		        break;
+    		    case "exit":
+    		        return;
+    	        default:
+    	            System.out.println("Invalid command or argument(s).");
+    	            break;
+		    }
 		}
 	}
 	
@@ -99,13 +117,21 @@ public class NESimulator
 	public static User createUser(String input)
 	{
 	    StringTokenizer st;
-	    int index;
         String name;
         byte[] keyBytes = new byte[16];
         st = new StringTokenizer(input, " ");
-        index = Integer.parseInt(st.nextToken());
         name = st.nextToken();
         for(int i = 0; i < 16; i++) keyBytes[i] = (byte) Integer.parseInt(st.nextToken());
         return new User(name, new Key(keyBytes));
+	}
+	
+	public static void configureAgent()
+	{
+	    System.out.println("Config under construction.");
+	}
+	
+	public static void agentStatistics()
+	{
+	    System.out.println("Agent stats under construction.");
 	}
 }
