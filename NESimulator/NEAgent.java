@@ -78,22 +78,29 @@ public class NEAgent extends Thread
 	            //INPUT FORMAT: username iv E("[get/set/walk/trap] OID {value}", userKey)
 	            if( (inputLn = in.readLine()) != null)
 	            {
+	                System.out.format("Full message=%s%n", inputLn);
 	                User user;
 	                int delim = inputLn.indexOf(' '); 
 	                String userString = inputLn.substring(0, delim);
+	                System.out.format("User=%s%n", userString);
 	                //Authenticate user
 	                if( (user = authenticate(userString)) != null)
 	                {
 	                    delim++;
 	                    byte[] iv = inputLn.substring(delim, delim+16).getBytes();
-	                    String message = inputLn.substring(delim+16);
+	                    System.out.format("IV=%s%n", new String(iv));
+	                    int index = user.getName().length() + new String(iv).length() + 1 + 1;
+	                    String message = inputLn.substring(index);
+	                    System.out.format("Message=%s%n", message);
+	                    
 	                    try
 	                    {
 	                        message = Crypto.AESCBCdecrypt(message, user.getKey(), iv);
+	                        System.out.format("message=%s%n", message);
 	                    }
 	                    catch(Exception e)
 	                    {
-	                        System.err.format("Encryption failed: %s%n", e.getMessage());
+	                        System.err.format("Decryption failed: %s%n", e.getMessage());
 	                        System.exit(-1);
 	                    }
 	                    

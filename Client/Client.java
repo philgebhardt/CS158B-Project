@@ -274,10 +274,13 @@ public class Client extends JFrame{
     
     private String prepAuthentication(String name, byte[] iv)
     {
+            /**
             StringBuilder ivString = new StringBuilder();
             for(int i = 0; i < iv.length; i++)
                 ivString.append(" " + iv[i]);
             return (name + ivString.toString());
+            **/
+        return name + " " + new String(iv);
     }
     
     private String prepMessage(String password, String message, byte[] iv)
@@ -288,7 +291,7 @@ public class Client extends JFrame{
             byte[] input1 = password.getBytes("UTF-16");
             byte[] hash1 = m.digest(input1);
             Key key = new Key(hash1);
-            return (" " + Crypto.AESCBCencrypt(message, key, iv));
+            return (Crypto.AESCBCencrypt(message, key, iv));
         }
         catch(Exception e)
         {
@@ -338,26 +341,32 @@ public class Client extends JFrame{
     {
         rmonString = rmonInput.getText();
         agentString = agentInput.getText();
-        communityString = commInput.getText();
+        //communityString = commInput.getText();
         oidString = oidInput.getText();
         byte[] iv = Crypto.generateIV(0, 16);
         
+        //Prepend Username and IV
         communicationString = prepAuthentication(userInput.getText(), iv);
         
-        if(command.equals("get"))
-            communicationString += prepMessage(passwordInput.getPassword().toString(),
-                    "get " + communityString + " " + oidString, iv);
-        else if (command.equals("set"))
-            communicationString += prepMessage(passwordInput.getPassword().toString(),
-                    "set " + communityString + " " + oidString, iv);
-        else if (command.equals("walk"))
-            communicationString += prepMessage(passwordInput.getPassword().toString(),
-                    "walk " + communityString + " " + oidString, iv);
-        else
-            communicationString += prepMessage(passwordInput.getPassword().toString(),
-                    "trap " + communityString + " " + oidString, iv);
+        switch(command)
+        {
+            case "get":
+                communicationString += " " + prepMessage(passwordInput.getPassword().toString(), "get " + oidString, iv);
+                break;
+            /*SET CASE IS UNDER CONSTRUCTION*/
+            case "set":
+                communicationString += prepMessage(passwordInput.getPassword().toString(), "get " + oidString, iv);
+                break;
+            case "walk":
+                communicationString += prepMessage(passwordInput.getPassword().toString(), "walk " + oidString, iv);
+                break;
+            /*TRAP CASE IS UNDER CONSTRUCTION*/
+            case "trap":
+                communicationString += prepMessage(passwordInput.getPassword().toString(), "get " + oidString, iv);
+                break;
+        }
         
-        updateLog("get " + oidInput.getText() + "...");
+        updateLog(communicationString);
         if (rmonString.isEmpty() == false)
             updateLog(communicate(communicationString, rmonString));
         else if (agentString.isEmpty() == false)
