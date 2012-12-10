@@ -132,7 +132,7 @@ public class Client extends JFrame{
         
         try
         {
-            serverSocket = new ServerSocket(4446);
+            serverSocket = new ServerSocket(4444);
             System.out.println("Server is listening...");
             clientSocket = serverSocket.accept();
             out = clientSocket.getOutputStream();
@@ -414,7 +414,7 @@ public class Client extends JFrame{
         try
         {
         	
-            echoSocket = new Socket(ipString, 4444);
+            echoSocket = new Socket(ipString, 4445);
             out = echoSocket.getOutputStream();
             in = echoSocket.getInputStream();
 		    out.write(command);

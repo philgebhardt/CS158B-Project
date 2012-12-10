@@ -68,7 +68,7 @@ public class NEAgent extends Thread
 	        
 	        try
 	        {
-	            serverSocket = new ServerSocket(4444);
+	            serverSocket = new ServerSocket(4447);
 	        }
 	        catch(IOException e)
 	        {

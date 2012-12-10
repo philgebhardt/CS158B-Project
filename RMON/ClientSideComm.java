@@ -8,6 +8,7 @@ import java.net.Socket;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.StringTokenizer;
@@ -44,10 +45,14 @@ public class ClientSideComm extends Thread
         {
             try
             {
-                serverSocket = new ServerSocket(4444);
+                serverSocket = new ServerSocket(4445);
                 clientSocket = serverSocket.accept();
                 in = clientSocket.getInputStream();
                 out = clientSocket.getOutputStream();
+                
+                Socket agentSocket = null;
+                InputStream inAgent = null;
+                OutputStream outAgent = null;
                 
                 byte[] input, output, iv;
                 String name, destIp, srcIp, processed;
@@ -64,21 +69,22 @@ public class ClientSideComm extends Thread
                 input = Byte.copy(input, name.length() + 18 + destIp.length() + 1, totalBytes - (name.length() + 18 + destIp.length() + 1));
                 input = Crypto.AESCBCdecrypt(input, users.get(name).getKey(), iv);
 
-                boolean is_trap = proccess(new String(input), users.get(name));
+                boolean is_trap = proccess(new String(input), users.get(name), srcIp);
                 
                 iv = Crypto.generateIV(0, 16);
-                output = Crypto.AESCBCdecrypt(input, users.get("RMON").getKey(), iv);
+                output = Crypto.AESCBCencrypt(input, users.get("RMON").getKey(), iv);
+                output = Byte.concat("RMON ".getBytes(), Byte.concat(iv, output));
                 
-                in.close();
-                out.close();
-                clientSocket.close();
-                
-                clientSocket = new Socket(destIp, 4444);
-                in = clientSocket.getInputStream();
-                out = clientSocket.getOutputStream();
-                out.write(output);
+                agentSocket = new Socket(destIp, 4447);
+                inAgent = agentSocket.getInputStream();
+                outAgent = agentSocket.getOutputStream();
+                outAgent.write(output);
                 input = new byte[1000];
-                totalBytes = in.read(input);
+                totalBytes = inAgent.read(input);
+                
+                agentSocket.close();
+                inAgent.close();
+                outAgent.close();
                 
                 if(is_trap)
                 {
@@ -86,10 +92,18 @@ public class ClientSideComm extends Thread
                 }
                 else
                 {
-                    output = Byte.copy(input, 0, totalBytes);
+                    iv = Byte.copy(input, 0, 16);
+                    output = Byte.copy(input, 16, totalBytes - 16);
+                    output = Crypto.AESCBCdecrypt(output, users.get("RMON").getKey(), iv);
+                    output = Crypto.AESCBCencrypt(output, users.get(name).getKey(), iv);
+                    output = Byte.concat(iv, output);
+                    out.write(output);
                 }
                 
                 serverSocket.close();
+                clientSocket.close();
+                in.close();
+                out.close();
                 
             } catch (IOException | InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | InvalidAlgorithmParameterException | ShortBufferException | IllegalBlockSizeException | BadPaddingException e)
             {
@@ -98,7 +112,7 @@ public class ClientSideComm extends Thread
         }
     }
     
-    private boolean proccess(String input, User user)
+    private boolean proccess(String input, User user, String ipForward)
     {
         StringTokenizer st = new StringTokenizer(input, " ");
         int n = st.countTokens();
@@ -116,7 +130,7 @@ public class ClientSideComm extends Thread
                 value = "";
                 for(i = 3; i < n; i++) value += args[i];
                 //Create alarm
-                Alarm alarm = new Alarm(user, name, value, TrapHandler.trapType(type));
+                Alarm alarm = new Alarm(user, ipForward, name, value, TrapHandler.trapType(type));
                 //Add alarm to alarm list
                 alarms.put(alarm.getName(), alarm);
                 return true;
