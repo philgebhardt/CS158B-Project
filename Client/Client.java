@@ -24,6 +24,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.WindowConstants;
@@ -43,7 +44,6 @@ public class Client extends JFrame{
     
     JLabel agentAddress;
     JLabel rmonAddress;
-    JLabel commString;
     JLabel oid;
     JLabel textLog;
     JLabel mibTree;
@@ -54,11 +54,11 @@ public class Client extends JFrame{
     JTextField oidInput;
     JTextField agentInput;
     JTextField rmonInput;
-    JTextField commInput;
     
     JPasswordField passwordInput;
     
     JTextArea log;
+    JScrollPane scrollable;
     
     JButton get; 
     JButton set; 
@@ -70,7 +70,6 @@ public class Client extends JFrame{
     String passwordString;
     String rmonString;
     String agentString;
-    String communityString;
     String oidString;
     
     byte[] communicationString;
@@ -106,7 +105,6 @@ public class Client extends JFrame{
 	{
 		rmonString = "";
 	    agentString = "";
-	    communityString = "";
 	    oidString = "";
 	}
 	private void initializePanels()
@@ -125,7 +123,6 @@ public class Client extends JFrame{
 	    passwordLabel = new JLabel("Password: ");
 	    agentAddress = new JLabel("Agent");
 	    rmonAddress = new JLabel("RMON");
-	    commString = new JLabel("Community String");
 	    oid = new JLabel("OID");
 	    textLog = new JLabel("LOG");
 	    mibTree = new JLabel("MIB Tree");
@@ -142,13 +139,14 @@ public class Client extends JFrame{
 	    agentInput.setPreferredSize(new Dimension(145, 25));
 	    rmonInput = new JTextField();
 	    rmonInput.setPreferredSize(new Dimension(145, 25));
-	    commInput = new JTextField();
-	    commInput.setPreferredSize(new Dimension(145, 25));
 	}
 	private void initializeTextAreas()
 	{
 		log = new JTextArea();
 	    log.setEditable(false);
+	    scrollable = new JScrollPane(log);
+	    scrollable.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+	    
 	    treeDisplay = new JPanel();
 	    treeDisplay.setPreferredSize(new Dimension(160, 555));
 	    treeDisplay.setLayout(new BoxLayout(treeDisplay, BoxLayout.Y_AXIS));
@@ -236,8 +234,6 @@ public class Client extends JFrame{
 	    north2.add(rmonInput);
 	    north2.add(agentAddress);
 	    north2.add(agentInput);
-	    north2.add(commString);
-	    north2.add(commInput);
 	    north2.add(oid);
 	    north2.add(oidInput);
 	    north.add(north1);
@@ -248,7 +244,7 @@ public class Client extends JFrame{
 	    west.add(treeDisplay);
 	    
 	    center.add(textLog);
-	    center.add(log);
+	    center.add(scrollable);
 	    
 	    south.add(get);
 	    south.add(set);
@@ -311,7 +307,7 @@ public class Client extends JFrame{
             in = echoSocket.getInputStream();
 		    out.write(command);
 		    totalBytes = in.read(input);
-		    decryptMessage(input, totalBytes);
+		    return decryptMessage(input, totalBytes);
         }
         catch (UnknownHostException e)
         {
@@ -339,26 +335,23 @@ public class Client extends JFrame{
 	{
 		rmonString = rmonInput.getText();
 	    agentString = agentInput.getText();
-	    communityString = commInput.getText();
 	    oidString = oidInput.getText();
 		byte[] iv = Crypto.generateIV(0, 16);
 	    
 		communicationString = prepAuthentication(userInput.getText(), iv);
-		
 		if(command.equals("get"))
-			communicationString = concatBytes( communicationString, prepMessage(passwordInput.getPassword().toString(),
-					"get " + communityString + " " + oidString, iv));
+			communicationString = concatBytes( communicationString, prepMessage(new String(passwordInput.getPassword()),
+					"get " + oidString, iv));
 		else if (command.equals("set"))
-			communicationString = concatBytes( communicationString, prepMessage(passwordInput.getPassword().toString(),
-					"set " + communityString + " " + oidString, iv));
+			communicationString = concatBytes( communicationString, prepMessage(new String(passwordInput.getPassword()),
+					"set " + oidString, iv));
 		else if (command.equals("walk"))
-			communicationString = concatBytes( communicationString, prepMessage(passwordInput.getPassword().toString(),
-					"walk " + communityString + " " + oidString, iv));
+			communicationString = concatBytes( communicationString, prepMessage(new String(passwordInput.getPassword()),
+					"walk " + oidString, iv));
 		else
-			communicationString = concatBytes( communicationString, prepMessage(passwordInput.getPassword().toString(),
-					"trap " + communityString + " " + oidString, iv));
-		
-        updateLog("get " + oidInput.getText() + "...");
+			communicationString = concatBytes( communicationString, prepMessage(new String(passwordInput.getPassword()),
+					"trap " + oidString, iv));
+        
         if (rmonString.isEmpty() == false)
         	updateLog(communicate(communicationString, rmonString));
         else if (agentString.isEmpty() == false)
@@ -383,16 +376,21 @@ public class Client extends JFrame{
 	
 	private String decryptMessage(byte[] input, int totalBytes)
 	{
-
+		//test
+		for(int i = 0 ; i < totalBytes; i++)
+		{
+			updateLog(String.format("%d", input[i]));
+		}
+		//test end
+		
 		byte[] message = new byte[totalBytes - 16];
 		byte[] iv = new byte[16];
-		String decryptedMessage;
 		for ( int i = 0; i < 16; i++)
 		{
 			iv[i] = input[i];
 		}
-		int messageI = 0;
-		for ( int i = 0; i < totalBytes; i++, messageI++)
+		int messageI = 16;
+		for ( int i = 0; i < totalBytes - 16; i++, messageI++)
 		{
 			message[i] = input[messageI];
 		}
@@ -404,6 +402,15 @@ public class Client extends JFrame{
 		{
 			updateLog("error decrypting message: " + e.getMessage());
 		}
-		return new String( message);
+		return newLineAdder(new String (message));	
+	}
+	
+	private String newLineAdder(String origMessage)
+	{
+		String modifiedMessage;
+		
+		modifiedMessage = origMessage.replace('|', '\n');
+		
+		return modifiedMessage;
 	}
 }
