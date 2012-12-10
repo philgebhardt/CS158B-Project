@@ -1,8 +1,8 @@
 package NESimulator;
-
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
@@ -54,8 +54,9 @@ public class NEAgent extends Thread
 	    {
 	        ServerSocket serverSocket = null;
 	        Socket clientSocket = null;
-	        OutputStream out = null;
-	        InputStream in = null;
+	        PrintWriter out = null;
+	        BufferedReader in = null;
+	        String inputLn, outputLn;
 	        
 	        try
 	        {
@@ -71,42 +72,64 @@ public class NEAgent extends Thread
 	        {
 	            System.out.println("Server is listening...");
 	            clientSocket = serverSocket.accept();
-	            out = clientSocket.getOutputStream();
-	            in = clientSocket.getInputStream();
+	            out = new PrintWriter(clientSocket.getOutputStream(), true);
+	            in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 	            
-	            byte[] input, output, iv, message;
-	            String name;
-	            int totalBytes;
-	            
-	            input = new byte[1000];
-	            totalBytes = in.read(input);
-	            input = copy(input, 0, totalBytes);
-	            name = new String(input);
-	            name = name.substring(0, name.indexOf(' '));
-	            
-	            iv = copy(input, name.length()+1, 16);
-	            message = copy(input, name.length() + 16 + 1);
-	            Key key = users.get(name).getKey();
-	            
-	            message = Crypto.AESCBCdecrypt(message, key, iv);
-	            String processed = process(new String(message));
-	            System.out.println(processed);
-	            iv = Crypto.generateIV(0, 16);
-	            message = Crypto.AESCBCencrypt(processed.getBytes(), key, iv);
-	            output = concat(iv,message);
-	            
-	            for(int i = 0; i < output.length; i++) System.out.format("%d ", output[i]);
-	            System.out.print("\n");
-	            out.write(output);
+	            //INPUT FORMAT: username iv E("[get/set/walk/trap] OID {value}", userKey)
+	            if( (inputLn = in.readLine()) != null)
+	            {
+	                System.out.format("Full message=%s%n", inputLn);
+	                User user;
+	                int delim = inputLn.indexOf(' '); 
+	                String userString = inputLn.substring(0, delim);
+	                System.out.format("User=%s%n", userString);
+	                //Authenticate user
+	                if( (user = authenticate(userString)) != null)
+	                {
+	                    delim++;
+	                    byte[] iv = inputLn.substring(delim, delim+16).getBytes();
+	                    System.out.format("IV=%s%n", new String(iv));
+	                    int index = user.getName().length() + new String(iv).length() + 1 + 1;
+	                    String message = inputLn.substring(index);
+	                    System.out.format("Message=%s%n", message);
+	                    
+	                    try
+	                    {
+	                        message = Crypto.AESCBCdecrypt(message, user.getKey(), iv);
+	                        System.out.format("message=%s%n", message);
+	                    }
+	                    catch(Exception e)
+	                    {
+	                        System.err.format("Decryption failed: %s%n", e.getMessage());
+	                        System.exit(-1);
+	                    }
+	                    
+	                    while(lock.tryLock() == false);
+	                    outputLn = process(message);
+	                    lock.unlock();
+	                    iv = Crypto.generateIV(seed++, 16);
+	                    
+	                    try
+	                    {
+	                        outputLn = "" + iv + Crypto.AESCBCencrypt(outputLn, user.getKey(), iv);
+	                    }
+	                    catch(Exception e)
+                        {
+                            System.err.format("Decryption failed: %s%n", e.getMessage());
+                            System.exit(-1);
+                        }
+	                }
+	                else
+	                {
+	                    outputLn = "Failed to authenticate user: " + userString;
+	                    out.println(outputLn);
+	                }
+	            }
 	        }
 	        catch(IOException e)
 	        {
 	            System.out.println("Client socket acceptance error.");
 	            System.exit(-1);
-	        }
-	        catch(Exception e)
-	        {
-	            System.out.format("%s%n", e.getMessage());
 	        }
 	        
 	        try
@@ -146,10 +169,8 @@ public class NEAgent extends Thread
             switch(args[0])
             {
                 case "get":
-                    if(oid != null)
-                        outputLn = oid.toString();
-                    else
-                        outputLn = "OID " + args[OID_ARG] + " not found.";
+                    if(oid != null) outputLn = oid.toString();
+                    else outputLn = "OID " + args[OID_ARG] + " not found.";
                     break;
                 case "set":
                     if(n < VALUE_ARG+1)
@@ -198,29 +219,6 @@ public class NEAgent extends Thread
 	    }
 	}
 	
-	private static byte[] concat(byte[] a, byte[] b)
-	{
-	    byte[] rv = new byte[a.length + b.length];
-	    for(int i = 0; i < a.length; i++) rv[i] = a[i];
-	    for(int i = 0; i < b.length; i++) rv[i + a.length] = b[i];
-	    return rv;
-	}
-	
-	private static byte[] copy(byte[] a, int offset, int len)
-	{
-	    byte[] rv = new byte[len];
-	    for(int i = 0; i < len; i++) rv[i] = a[offset + i];
-	    return rv;
-	}
-	
-	private static byte[] copy(byte[] a, int offset)
-    {
-        byte[] rv = new byte[a.length - offset];
-        for(int i = 0; i < a.length - offset; i++) rv[i] = a[offset + i];
-        return rv;
-    }
-	
-	/**
 	private User authenticate(String username)
 	{
 	    if(users.containsKey(username))
@@ -232,5 +230,4 @@ public class NEAgent extends Thread
 	        return null;
 	    }
 	}
-	**/
 }
