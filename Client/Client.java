@@ -1,5 +1,7 @@
 package Client;
 
+import Crypto.*;
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -11,6 +13,7 @@ import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.MessageDigest;
@@ -27,14 +30,13 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.WindowConstants;
 
-import Crypto.*;
-
 public class Client extends JFrame{
 	
 	char newline = '\n';
 	
 	JPanel north1;
 	JPanel north2;
+	JPanel north3;
     JPanel north;
 	JPanel west;
     JPanel center;
@@ -49,11 +51,13 @@ public class Client extends JFrame{
     JLabel mibTree;
     JLabel userLabel;
 	JLabel passwordLabel;
+	JLabel extraCommands;
 	
 	JTextField userInput;
     JTextField oidInput;
     JTextField agentInput;
     JTextField rmonInput;
+    JTextField commandInput;
     
     JPasswordField passwordInput;
     
@@ -63,7 +67,7 @@ public class Client extends JFrame{
     JButton get; 
     JButton set; 
     JButton walk; 
-    JButton trap; 
+    JButton alarm; 
     JButton displayButton;
     
     String userString;
@@ -71,6 +75,7 @@ public class Client extends JFrame{
     String rmonString;
     String agentString;
     String oidString;
+    String extraString;
     
     byte[] communicationString;
     
@@ -81,7 +86,31 @@ public class Client extends JFrame{
 	public Client(String title)
 	{
 		super(title);
-
+		threading();
+		
+	}
+	
+	private void threading()
+	{
+		Runnable r1 = new Runnable() {
+			public void run() {
+				clientInterface();
+			}
+		};
+		Runnable r2 = new Runnable() {
+			public void run() {
+				while(true)
+					alarmHandler();
+			}
+		};
+		Thread thr1 = new Thread(r1);
+		Thread thr2 = new Thread(r2);
+		thr1.start();
+		thr2.start();
+	}
+	
+	private void clientInterface()
+	{
 		initializeStrings();
 		initializePanels();
 	    initializeLabels();
@@ -93,9 +122,77 @@ public class Client extends JFrame{
 	    combineEverything();
 		setFrame();
 	}
-	public void setFrame()
+	private void alarmHandler()
+	{
+		ServerSocket serverSocket = null;
+        Socket clientSocket = null;
+        OutputStream out = null;
+        InputStream in = null;
+        
+        try
+        {
+            serverSocket = new ServerSocket(4445);
+            System.out.println("Server is listening...");
+            clientSocket = serverSocket.accept();
+            out = clientSocket.getOutputStream();
+            in = clientSocket.getInputStream();
+            
+            byte[] input, iv, message;
+            String name;
+            int totalBytes;
+            
+            input = new byte[1000];
+            totalBytes = in.read(input);
+            input = copy(input, 0, totalBytes);
+            name = new String(input);
+            name = name.substring(0, name.indexOf(' '));
+            
+            iv = copy(input, 0, 16);
+            message = copy(input, 16);
+            
+            message = Crypto.AESCBCdecrypt(message, key, iv);
+
+            
+            updateLog(new String(message));
+        }
+        catch(IOException e)
+        {
+            System.out.println("ServerSocket connection error.");
+        }
+        catch(Exception e)
+        {
+            System.out.format("%s%n", e.getMessage());
+        }
+       
+        
+        try
+        {
+            out.close();
+            in.close();
+            serverSocket.close();
+            clientSocket.close();
+        }
+        catch(IOException e)
+        {
+            System.out.println("Something happened when tearing down sockets and I/O.");
+            System.exit(-1);
+        }
+	}
+	private byte[] copy(byte[] a, int offset, int len)
+	{
+	    byte[] rv = new byte[len];
+	    for(int i = 0; i < len; i++) rv[i] = a[offset + i];
+	    return rv;
+	}
+	private byte[] copy(byte[] a, int offset)
+    {
+        byte[] rv = new byte[a.length - offset];
+        for(int i = 0; i < a.length - offset; i++) rv[i] = a[offset + i];
+        return rv;
+    }
+	private void setFrame()
 	{	
-	    setSize(850, 500);
+	    setSize(850, 700);
 		setVisible(true);
 		setResizable(false);
 		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -111,6 +208,7 @@ public class Client extends JFrame{
 	{
 	    north1 = new JPanel();
 	    north2 = new JPanel();
+	    north3 = new JPanel();
 	    north = new JPanel();
 	    west = new JPanel();
 	    center = new JPanel();
@@ -126,6 +224,7 @@ public class Client extends JFrame{
 	    oid = new JLabel("OID");
 	    textLog = new JLabel("LOG");
 	    mibTree = new JLabel("MIB Tree");
+	    extraCommands = new JLabel("Extra Command");
 	}
 	private void initializeInputFields()
 	{
@@ -139,6 +238,8 @@ public class Client extends JFrame{
 	    agentInput.setPreferredSize(new Dimension(145, 25));
 	    rmonInput = new JTextField();
 	    rmonInput.setPreferredSize(new Dimension(145, 25));
+	    commandInput = new JTextField();
+	    commandInput.setPreferredSize(new Dimension(300, 25));
 	}
 	private void initializeTextAreas()
 	{
@@ -154,13 +255,15 @@ public class Client extends JFrame{
 	private void initializeTreeTable()
 	{
 		list = new ArrayList<TreeNode>();
-	    list.add(new TreeNode("- tcpConnTable", "0"));
-	    list.add(new TreeNode("   - tcpConnEntry", "0.0"));
-	    list.add(new TreeNode("      - tcpConnState", "0.0.0"));
-	    list.add(new TreeNode("      - tcpConnLocalAddress", "0.0.1"));
-	    list.add(new TreeNode("      - tcpConnLocalPort", "0.0.2"));
-	    list.add(new TreeNode("      - tcpConnRemAddress", "0.0.3"));
-	    list.add(new TreeNode("      - tcpConnRemPort", "0.0.4"));
+		list.add(new TreeNode("* MIB-2", "0"));
+	    list.add(new TreeNode("   * System", "0.0"));
+	    list.add(new TreeNode("      * SysName", "0.0.0"));
+	    list.add(new TreeNode("      * SysLocation", "0.0.1"));
+	    list.add(new TreeNode("      * SysContact", "0.0.2"));
+	    list.add(new TreeNode("      * SysUptime", "0.0.3"));
+	    list.add(new TreeNode("   * TCP", "0.1"));
+	    list.add(new TreeNode("      * TCP-ConnTable", "0.1.0"));
+	    list.add(new TreeNode("      * CurrConnections", "0.1.1"));
 	    for (int i = 0; i < list.size(); i++)
 	    {
 	    	final TreeNode nextNode = list.get(i);
@@ -198,12 +301,12 @@ public class Client extends JFrame{
 	        	sendRequest("walk");
 	        }
 	    }); 
-	    trap = new JButton("TRAP");
-	    trap.addActionListener(new ActionListener() {
+	    alarm = new JButton("ALARM");
+	    alarm.addActionListener(new ActionListener() {
 	    	 
 	        public void actionPerformed(ActionEvent e)
 	        { 
-	        	sendRequest("trap");
+	        	sendRequest("alarm");
 	        }
 	    });
 	}
@@ -213,6 +316,8 @@ public class Client extends JFrame{
 	    west.setBackground(Color.GRAY);
 	    center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
 	    center.setBackground(Color.GRAY);
+	    north3.setLayout(new FlowLayout());
+	    north3.setBackground(Color.GRAY);
 		north2.setLayout(new FlowLayout());
 	    north2.setBackground(Color.GRAY);
 	    north1.setLayout(new FlowLayout());
@@ -236,8 +341,11 @@ public class Client extends JFrame{
 	    north2.add(agentInput);
 	    north2.add(oid);
 	    north2.add(oidInput);
+	    north3.add(extraCommands);
+	    north3.add(commandInput);
 	    north.add(north1);
 	    north.add(north2);
+	    north.add(north3);
 	    
 	    west.setPreferredSize(new Dimension(160, 555));
 	    west.add(mibTree);
@@ -249,7 +357,7 @@ public class Client extends JFrame{
 	    south.add(get);
 	    south.add(set);
 	    south.add(walk);
-	    south.add(trap);
+	    south.add(alarm);
 	    
 	    add(north, BorderLayout.NORTH);
 	    add(west, BorderLayout.WEST);
@@ -337,6 +445,7 @@ public class Client extends JFrame{
 		rmonString = rmonInput.getText();
 	    agentString = agentInput.getText();
 	    oidString = oidInput.getText();
+	    extraString = commandInput.getText();
 		byte[] iv = Crypto.generateIV(0, 16);
 	    
 		communicationString = prepAuthentication(userInput.getText(), iv);
@@ -345,13 +454,13 @@ public class Client extends JFrame{
 					"get " + oidString, iv));
 		else if (command.equals("set"))
 			communicationString = concatBytes( communicationString, prepMessage(new String(passwordInput.getPassword()),
-					"set " + oidString, iv));
+					"set " + oidString + " " + extraString, iv));
 		else if (command.equals("walk"))
 			communicationString = concatBytes( communicationString, prepMessage(new String(passwordInput.getPassword()),
 					"walk " + oidString, iv));
 		else
 			communicationString = concatBytes( communicationString, prepMessage(new String(passwordInput.getPassword()),
-					"trap " + oidString, iv));
+					"trap " + oidString + " " + extraString, iv));
         
         if (rmonString.isEmpty() == false)
         	updateLog(communicate(communicationString, rmonString));
