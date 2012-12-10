@@ -131,29 +131,32 @@ public class Client extends JFrame{
         
         try
         {
-            serverSocket = new ServerSocket(4445);
+            serverSocket = new ServerSocket(4446);
             System.out.println("Server is listening...");
             clientSocket = serverSocket.accept();
             out = clientSocket.getOutputStream();
             in = clientSocket.getInputStream();
             
             byte[] input, iv, message;
-            String name;
+            String output;
             int totalBytes;
             
             input = new byte[1000];
             totalBytes = in.read(input);
+            output = decryptMessage(input, totalBytes);
+/*
             input = copy(input, 0, totalBytes);
-            name = new String(input);
-            name = name.substring(0, name.indexOf(' '));
             
             iv = copy(input, 0, 16);
             message = copy(input, 16);
+            String s = "";
+            for(int i = 0; i < message.length; i++) s += String.format("%d ", message[i]);
+            updateLog(s);
             
             message = Crypto.AESCBCdecrypt(message, key, iv);
-
+*/
             
-            updateLog(new String(message));
+            updateLog(new String(output));
         }
         catch(IOException e)
         {
@@ -192,7 +195,7 @@ public class Client extends JFrame{
     }
 	private void setFrame()
 	{	
-	    setSize(850, 700);
+	    setSize(850, 500);
 		setVisible(true);
 		setResizable(false);
 		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -407,7 +410,6 @@ public class Client extends JFrame{
         String report = "Error";
         int totalBytes = -1;
         byte[] input = new byte[1000];
-        updateLog("PING!");
         try
         {
         	
@@ -486,12 +488,12 @@ public class Client extends JFrame{
 	
 	private String decryptMessage(byte[] input, int totalBytes)
 	{
-		//test
+		/*test
 		for(int i = 0 ; i < totalBytes; i++)
 		{
 			updateLog(String.format("%d", input[i]));
 		}
-		//test end
+		*///test end
 		
 		byte[] message = new byte[totalBytes - 16];
 		byte[] iv = new byte[16];
