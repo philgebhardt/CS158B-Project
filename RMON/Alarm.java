@@ -5,14 +5,16 @@ import Structure.User;
 public class Alarm
 {
     private User user;
+    private String ipForward;
     private String name;
     private String threshold;
     private int type;
     private boolean threshold_crossed;
     
-    public Alarm(User user, String name, String threshold, int type)
+    public Alarm(User user, String ipForward, String name, String threshold, int type)
     {
         this.user = user;
+        this.ipForward = ipForward;
         this.name = name;
         this.threshold = threshold;
         this.type = type;
@@ -22,6 +24,11 @@ public class Alarm
     public User getUser()
     {
         return user;
+    }
+    
+    public String getIpForward()
+    {
+        return ipForward;
     }
     
     public String getName()
