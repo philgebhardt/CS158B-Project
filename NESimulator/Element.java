@@ -15,16 +15,18 @@ public class Element extends Thread
     { "FIN_WAIT_1", "TIMED_WAIT", "CLOSE_WAIT", "FIN_WAIT_2", "LAST_ACK",
             "CLOSED" };
 
+    OID tcpTableSize;
     OrderedTree<OID> tcpConnTable;
-    OrderedTree<OID> systemInfo;
+    OrderedTree<OID> system;
     Lock lock;
     
     static final Random random = new Random();
 
-    public Element()
+    public Element(LinkedList<OrderedTree<OID>> systemInfo)
     {
+        this.tcpTableSize = new OID("CurrConnections", "0");
         this.tcpConnTable = new OrderedTree<OID>(new OID("TCP_CONN_TABLE", null), new LinkedList<OrderedTree<OID>>());
-        this.systemInfo = new OrderedTree<OID>(new OID("SYSTEM", null), new LinkedList<OrderedTree<OID>>());
+        this.system = new OrderedTree<OID>(new OID("SYSTEM", null), systemInfo);
     }
     
     public void giveLock(Lock lock)
@@ -39,10 +41,19 @@ public class Element extends Thread
 
     public OrderedTree<OID> agentData()
     {
+        LinkedList<OrderedTree<OID>> tcpList = new LinkedList<OrderedTree<OID>>();
         LinkedList<OrderedTree<OID>> list = new LinkedList<OrderedTree<OID>>();
-        list.add(systemInfo);
-        list.add(tcpConnTable);
-        return new OrderedTree<OID>(new OID("ROOT", null), list);
+        LinkedList<OrderedTree<OID>> rootList = new LinkedList<OrderedTree<OID>>();
+        
+        tcpList.add(tcpConnTable);
+        tcpList.add(new OrderedTree<OID>(tcpTableSize, null));
+        OrderedTree<OID> tcp = new OrderedTree<OID>(new OID("TCP"), tcpList);
+        
+        list.add(system);
+        list.add(tcp);
+        rootList.add(new OrderedTree<OID>(new OID("MIB-2", null), list));
+        
+        return new OrderedTree<OID>(new OID("ROOT"), rootList);
     }
 
     @Override
@@ -75,6 +86,7 @@ public class Element extends Thread
         {
             OID newOID = createRandomTCP_OID();
             tcpConnTable.listIterator().add(new OrderedTree<OID>(newOID, null));
+            incrementTcpTableSize();
         }
     }
 
@@ -94,12 +106,15 @@ public class Element extends Thread
                 {
                     case "FIN_WAIT":
                         iter.remove();
+                        decrementTcpTableSize();
                         break;
                     case "LISTEN":
                         iter.remove();
+                        decrementTcpTableSize();
                         break;
                     case "CLOSED":
                         iter.remove();
+                        decrementTcpTableSize();
                         break;
                     default:
                         break;
@@ -171,5 +186,18 @@ public class Element extends Thread
 
         r = random.nextInt(TCP_OPEN_CONN_STATES.length);
         return new OID(name, TCP_OPEN_CONN_STATES[r]);
+    }
+    
+    void incrementTcpTableSize()
+    {
+        int i = Integer.parseInt(tcpTableSize.getValue());
+        i++;
+        tcpTableSize.setValue(""+i);
+    }
+    void decrementTcpTableSize()
+    {
+        int i = Integer.parseInt(tcpTableSize.getValue());
+        i--;
+        tcpTableSize.setValue(""+i);
     }
 }

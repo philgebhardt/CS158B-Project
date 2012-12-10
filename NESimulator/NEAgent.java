@@ -78,6 +78,8 @@ public class NEAgent extends Thread
 	            String name;
 	            int totalBytes;
 	            
+	            Thread.sleep(2000);
+	            
 	            input = new byte[1000];
 	            totalBytes = in.read(input);
 	            input = copy(input, 0, totalBytes);

@@ -59,7 +59,7 @@ public class NESimulator
 	public static void initializeThreads()
 	{
 	    //Initialize threads
-        element = new Element();
+        element = new Element(listSystemInfo());
         agent = new NEAgent(element.agentData());
         Lock myLock = new MyLock();
         element.giveLock(myLock);
@@ -136,5 +136,15 @@ public class NESimulator
 	public static void agentStatistics()
 	{
 	    System.out.println("Agent stats under construction.");
+	}
+	
+	public static LinkedList<OrderedTree<OID>> listSystemInfo()
+	{
+	    LinkedList<OrderedTree<OID>> list = new LinkedList<OrderedTree<OID>>();
+	    list.add(new OrderedTree<OID>(new OID("SysName", "Router1"), null));
+	    list.add(new OrderedTree<OID>(new OID("SysLocation", "On the dock of the bay..."), null));
+	    list.add(new OrderedTree<OID>(new OID("SysContact", "(555)555-5555"), null));
+	    list.add(new OrderedTree<OID>(new OID("SysUptime", "0"), null));
+	    return list;
 	}
 }

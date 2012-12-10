@@ -299,6 +299,7 @@ public class Client extends JFrame{
         String report = "Error";
         int totalBytes = -1;
         byte[] input = new byte[1000];
+        updateLog("PING!");
         try
         {
         	
