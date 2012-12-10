@@ -1,18 +1,27 @@
 package RMON;
 
+import Structure.User;
+
 public class Alarm
 {
+    private User user;
     private String name;
     private String threshold;
     private int type;
     private boolean threshold_crossed;
     
-    public Alarm(String name, String threshold, int type)
+    public Alarm(User user, String name, String threshold, int type)
     {
+        this.user = user;
         this.name = name;
         this.threshold = threshold;
         this.type = type;
         this.threshold_crossed = false;
+    }
+    
+    public User getUser()
+    {
+        return user;
     }
     
     public String getName()
