@@ -1,3 +1,5 @@
+package Client;
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -6,16 +8,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.security.*;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 
 import javax.swing.BoxLayout;
@@ -28,6 +26,8 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.WindowConstants;
+
+import Crypto.*;
 
 public class Client extends JFrame{
 	
@@ -95,7 +95,7 @@ public class Client extends JFrame{
 	}
 	public void setFrame()
 	{	
-	    setSize(850, 700);
+	    setSize(850, 500);
 		setVisible(true);
 		setResizable(false);
 		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
