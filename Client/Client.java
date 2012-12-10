@@ -1,6 +1,7 @@
 package Client;
 
 import Crypto.*;
+import Structure.Byte;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -137,7 +138,7 @@ public class Client extends JFrame{
             out = clientSocket.getOutputStream();
             in = clientSocket.getInputStream();
             
-            byte[] input, iv, message;
+            byte[] input;
             String output;
             int totalBytes;
             
@@ -382,7 +383,7 @@ public class Client extends JFrame{
 	
 	private byte[] prepAuthentication(String name, byte[] iv)
 	{
-    		return concatBytes(concatBytes(name.getBytes(), " ".getBytes()), iv);
+    		return Byte.concat(Byte.concat(name.getBytes(), " ".getBytes()), iv);
 	}
 	
 	private byte[] prepMessage(String password, String message, byte[] iv)
@@ -451,17 +452,33 @@ public class Client extends JFrame{
 		byte[] iv = Crypto.generateIV(0, 16);
 	    
 		communicationString = prepAuthentication(userInput.getText(), iv);
+		
+		if(!rmonString.isEmpty())
+		{
+		    if(agentString.isEmpty())
+		    {
+		        updateLog("Please enter agent destination address");
+		        return;
+		    }
+		    else
+		    {
+		        communicationString = Byte.concat(communicationString, " ".getBytes());
+		        communicationString = Byte.concat(communicationString, agentString.getBytes());
+		        communicationString = Byte.concat(communicationString, " ".getBytes());
+		    }
+		}
+		
 		if(command.equals("get"))
-			communicationString = concatBytes( communicationString, prepMessage(new String(passwordInput.getPassword()),
+			communicationString = Byte.concat( communicationString, prepMessage(new String(passwordInput.getPassword()),
 					"get " + oidString, iv));
 		else if (command.equals("set"))
-			communicationString = concatBytes( communicationString, prepMessage(new String(passwordInput.getPassword()),
+			communicationString = Byte.concat( communicationString, prepMessage(new String(passwordInput.getPassword()),
 					"set " + oidString + " " + extraString, iv));
 		else if (command.equals("walk"))
-			communicationString = concatBytes( communicationString, prepMessage(new String(passwordInput.getPassword()),
+			communicationString = Byte.concat( communicationString, prepMessage(new String(passwordInput.getPassword()),
 					"walk " + oidString, iv));
 		else
-			communicationString = concatBytes( communicationString, prepMessage(new String(passwordInput.getPassword()),
+			communicationString = Byte.concat( communicationString, prepMessage(new String(passwordInput.getPassword()),
 					"trap " + oidString + " " + extraString, iv));
         
         if (rmonString.isEmpty() == false)
@@ -472,19 +489,6 @@ public class Client extends JFrame{
         	updateLog("Please enter destination address");
         done();
 	}
-	private byte[] concatBytes(byte[] a, byte[] b)
-	{
-		byte[] concat = new byte[a.length + b.length];
-		int n = a.length;
-		int m = b.length;
-		for(int i = 0; i < n; i++)
-			concat[i] = a[i];
-		for(int i = 0; i < m; i++)
-			concat[i + a.length] = b[i];
-		
-		return concat;
-	}
-	
 	
 	private String decryptMessage(byte[] input, int totalBytes)
 	{

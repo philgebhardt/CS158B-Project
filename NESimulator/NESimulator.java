@@ -90,7 +90,7 @@ public class NESimulator
 	    String line;
 	    users = new LinkedList<User>();
 	    FileSystem fs = FileSystems.getDefault();
-	    Path configFile = fs.getPath("CONFIG");
+	    Path configFile = fs.getPath("CONFIG.agent");
 	    
 	    try
 	    {

@@ -18,7 +18,7 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.ShortBufferException;
 
 import Crypto.*;
-import Structure.MyLock;
+import Structure.Byte;
 import Structure.OID;
 import Structure.User;
 
@@ -58,12 +58,13 @@ public class TrapHandler extends Thread
             ListIterator<TrapContainer> iter = traps.listIterator();
             while(iter.hasNext())
             {
+                int status;
                 TrapContainer trap = iter.next();
-                if(trap.conditionOccured())
+                if( (status = trap.conditionOccured()) > 0 )
                 {
                     try
                     {
-                        sendTrapNotification(trap);
+                        sendTrapNotification(trap, status);
                     } catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException
                             | InvalidAlgorithmParameterException
                             | ShortBufferException | IllegalBlockSizeException
@@ -77,7 +78,7 @@ public class TrapHandler extends Thread
         }
     }
     
-    public static void sendTrapNotification(TrapContainer trap) throws UnknownHostException, IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, ShortBufferException, IllegalBlockSizeException, BadPaddingException
+    public static void sendTrapNotification(TrapContainer trap, int status) throws UnknownHostException, IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, ShortBufferException, IllegalBlockSizeException, BadPaddingException
     {
         long systemTime = System.currentTimeMillis();
         Socket clientSocket = new Socket(trap.getHost(), 4446);
@@ -88,7 +89,7 @@ public class TrapHandler extends Thread
         name = trap.getOID().getName();
         value = trap.getValue();
         oidString = trap.getOID().toString();
-        switch(trap.getType())
+        switch(status)
         {
             case NOT_EQUAL:
                 type = "!=";
@@ -110,7 +111,7 @@ public class TrapHandler extends Thread
         byte[] output;
         byte[] iv = Crypto.generateIV(0, 16);
         output = iv;
-        output = concat(output, Crypto.AESCBCencrypt(message.getBytes(), key, iv));
+        output = Byte.concat(output, Crypto.AESCBCencrypt(message.getBytes(), key, iv));
         String s = "";
         for(int i = 0; i < output.length; i++) s += String.format("%d ", output[i]);
         System.out.println(s);
@@ -202,43 +203,43 @@ public class TrapHandler extends Thread
             this.host = host;
         }
         
-        public boolean conditionOccured()
+        public int conditionOccured()
         {
-            boolean condition = false;
+            int status = -1;
             switch(this.type)
             {
                 case NOT_EQUAL:
                     if( !this.value.equals(this.oid.getValue()) )
                     {
-                        condition = true;
+                        status = this.type;
                         this.type = IS_EQUAL;
                     }
                     break;
                 case LESS_THAN:
                     if(Integer.parseInt(this.oid.getValue()) < Integer.parseInt(this.value))
                     {
-                        condition = true;
+                        status = this.type;
                         this.type = MORE_THAN;
                     }
                     break;
                 case MORE_THAN:
                     if(Integer.parseInt(this.oid.getValue()) > Integer.parseInt(this.value)) 
                     {
-                        condition = true;
+                        status = this.type;
                         this.type = LESS_THAN;
                     }
                     break;
                 case IS_EQUAL:
                     if( this.value.equals(this.oid.getValue()) )
                     {
-                        condition = true;
+                        status = this.type;
                         this.type = NOT_EQUAL;
                     }
                     break;
                 default:
                     break;
             }
-            return condition;
+            return status;
         }
     }
     
@@ -263,13 +264,5 @@ public class TrapHandler extends Thread
                 break;
         }
         return rv;
-    }
-    
-    private static byte[] concat(byte[] a, byte[] b)
-    {
-        byte[] concat = new byte[a.length + b.length];
-        for(int i = 0; i < a.length; i++) concat[i] = a[i];
-        for(int i = 0; i < b.length; i++) concat[a.length + i] = b[i];
-        return concat;
     }
 }

@@ -12,6 +12,7 @@ import java.util.concurrent.locks.Lock;
 
 import Crypto.*;
 import Structure.*;
+import Structure.Byte;
 
 public class NEAgent extends Thread
 {
@@ -88,12 +89,12 @@ public class NEAgent extends Thread
 	            
 	            input = new byte[1000];
 	            totalBytes = in.read(input);
-	            input = copy(input, 0, totalBytes);
+	            input = Byte.copy(input, 0, totalBytes);
 	            name = new String(input);
 	            name = name.substring(0, name.indexOf(' '));
 	            
-	            iv = copy(input, name.length()+1, 16);
-	            message = copy(input, name.length() + 16 + 1);
+	            iv = Byte.copy(input, name.length()+1, 16);
+	            message = Byte.copy(input, name.length() + 16 + 1);
 	            Key key = users.get(name).getKey();
 	            
 	            message = Crypto.AESCBCdecrypt(message, key, iv);
@@ -102,7 +103,7 @@ public class NEAgent extends Thread
 	            System.out.println(processed);
 	            iv = Crypto.generateIV(0, 16);
 	            message = Crypto.AESCBCencrypt(processed.getBytes(), key, iv);
-	            output = concat(iv,message);
+	            output = Byte.concat(iv,message);
 	            
 	            for(int i = 0; i < output.length; i++) System.out.format("%d ", output[i]);
 	            System.out.print("\n");
@@ -223,28 +224,6 @@ public class NEAgent extends Thread
 	        return children;
 	    }
 	}
-	
-	private static byte[] concat(byte[] a, byte[] b)
-	{
-	    byte[] rv = new byte[a.length + b.length];
-	    for(int i = 0; i < a.length; i++) rv[i] = a[i];
-	    for(int i = 0; i < b.length; i++) rv[i + a.length] = b[i];
-	    return rv;
-	}
-	
-	private static byte[] copy(byte[] a, int offset, int len)
-	{
-	    byte[] rv = new byte[len];
-	    for(int i = 0; i < len; i++) rv[i] = a[offset + i];
-	    return rv;
-	}
-	
-	private static byte[] copy(byte[] a, int offset)
-    {
-        byte[] rv = new byte[a.length - offset];
-        for(int i = 0; i < a.length - offset; i++) rv[i] = a[offset + i];
-        return rv;
-    }
 	
 	/**
 	private User authenticate(String username)

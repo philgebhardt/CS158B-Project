@@ -182,6 +182,7 @@ public class OrderedTree<E>
      */
     public OrderedTree<E> seek(String index)
     {
+        index = index.trim();
         int i, n;
         n = index.length();
         i = Integer.parseInt(index.substring(0,1));
