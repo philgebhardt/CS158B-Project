@@ -56,6 +56,7 @@ public class NEAgent extends Thread
 	{
 	    trapHandler = new TrapHandler();
         trapHandler.setDaemon(true);
+        trapHandler.giveLock(lock);
         trapHandler.start();
 	    while(true)
 	    {
@@ -170,7 +171,7 @@ public class NEAgent extends Thread
                         {
                             String s = "";
                             for(int i = VALUE_ARG; i < n; i++) s += args[i] + " ";
-                            oid.setValue(s);
+                            oid.setValue(s.trim());
                             outputLn = "set successful";
                         }
                         else outputLn = "set unsuccessful: OID " + args[OID_ARG] + " not found.";
@@ -189,13 +190,13 @@ public class NEAgent extends Thread
                         if(oid != null)
                         {
                             String value = "";
+                            String host = clientSocket.getInetAddress().toString().substring(1);
                             for(int i = TYPE_ARG; i < n; i++) value += args[i] + " ";
-                            trapHandler.addTrap(oid, TrapHandler.trapType(args[VALUE_ARG]), value, clientSocket.getInetAddress().toString(), user);
+                            trapHandler.addTrap(oid, TrapHandler.trapType(args[VALUE_ARG]), value.trim(), host, user);
                             outputLn = "trap set successful";
                         }
                         else outputLn = "trap command unsuccessful: OID " + args[OID_ARG] + " not found.";
                     }
-                    outputLn = "Under Construction";
                     break;
                 default:
                     outputLn = "How did you get here?";

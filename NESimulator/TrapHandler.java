@@ -10,6 +10,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.LinkedList;
 import java.util.ListIterator;
+import java.util.concurrent.locks.Lock;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -28,19 +29,31 @@ public class TrapHandler extends Thread
     public static final int MORE_THAN = 2;
     public static final int IS_EQUAL = 3;
     
-    MyLock lock;
+    Lock lock;
     LinkedList<TrapContainer> traps;
     
     public TrapHandler()
     {
-        lock = new MyLock();
         traps = new LinkedList<TrapContainer>();
+    }
+    
+    public void giveLock(Lock l)
+    {
+        lock = l;
     }
     
     public void run()
     {
         while(true)
         {
+            try
+            {
+                Thread.sleep(1000);
+            } catch (InterruptedException e1)
+            {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
             while(lock.tryLock() == false);
             ListIterator<TrapContainer> iter = traps.listIterator();
             while(iter.hasNext())
@@ -56,7 +69,7 @@ public class TrapHandler extends Thread
                             | ShortBufferException | IllegalBlockSizeException
                             | BadPaddingException | IOException e)
                     {
-                        System.out.println(e.getMessage());
+                        System.out.println("Error: " + e.getMessage());
                     }
                 }
             }
@@ -94,18 +107,22 @@ public class TrapHandler extends Thread
                 break;
         }
         message = "" + systemTime + " " + "Trap Notification: " + name + " value " + type + " " + value + " " + oidString;
-        byte[] output = message.getBytes();
+        byte[] output;
         byte[] iv = Crypto.generateIV(0, 16);
         output = iv;
-        output = concat(output, Crypto.AESCBCencrypt(output, key, iv));
+        output = concat(output, Crypto.AESCBCencrypt(message.getBytes(), key, iv));
+        String s = "";
+        for(int i = 0; i < output.length; i++) s += String.format("%d ", output[i]);
+        System.out.println(s);
         out.write(output);
-        System.out.format("Sent: %s%n", message);
+        System.out.format("Sent: %s%n", new String(output));
         byte[] input = new byte[1000];
         in.read(input);
         in.close();
         out.close();
         clientSocket.close();
     }
+    
     public void addTrap(OID oid, int type, String value, String host, User user)
     {
         while(lock.tryLock() == false);
@@ -191,16 +208,32 @@ public class TrapHandler extends Thread
             switch(this.type)
             {
                 case NOT_EQUAL:
-                    if( !this.value.equals(this.oid.getValue()) ) condition = true;
+                    if( !this.value.equals(this.oid.getValue()) )
+                    {
+                        condition = true;
+                        this.type = IS_EQUAL;
+                    }
                     break;
                 case LESS_THAN:
-                    if(Integer.parseInt(this.oid.getValue()) < Integer.parseInt(this.value)) condition = true;
+                    if(Integer.parseInt(this.oid.getValue()) < Integer.parseInt(this.value))
+                    {
+                        condition = true;
+                        this.type = MORE_THAN;
+                    }
                     break;
                 case MORE_THAN:
-                    if(Integer.parseInt(this.oid.getValue()) > Integer.parseInt(this.value)) condition = true;
+                    if(Integer.parseInt(this.oid.getValue()) > Integer.parseInt(this.value)) 
+                    {
+                        condition = true;
+                        this.type = LESS_THAN;
+                    }
                     break;
                 case IS_EQUAL:
-                    if( this.value.equals(this.oid.getValue()) ) condition = true;
+                    if( this.value.equals(this.oid.getValue()) )
+                    {
+                        condition = true;
+                        this.type = NOT_EQUAL;
+                    }
                     break;
                 default:
                     break;
