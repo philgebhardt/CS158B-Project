@@ -51,7 +51,6 @@ public class TrapHandler extends Thread
                 Thread.sleep(1000);
             } catch (InterruptedException e1)
             {
-                // TODO Auto-generated catch block
                 e1.printStackTrace();
             }
             while(lock.tryLock() == false);
@@ -80,8 +79,9 @@ public class TrapHandler extends Thread
     
     public static void sendTrapNotification(TrapContainer trap, int status) throws UnknownHostException, IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, ShortBufferException, IllegalBlockSizeException, BadPaddingException
     {
+        System.out.println(trap.getHost());
         long systemTime = System.currentTimeMillis();
-        Socket clientSocket = new Socket(trap.getHost(), 4446);
+        Socket clientSocket = new Socket(trap.getHost(), 4445);
         InputStream in = clientSocket.getInputStream();
         OutputStream out = clientSocket.getOutputStream();
         Key key = trap.getUser().getKey();
@@ -107,9 +107,10 @@ public class TrapHandler extends Thread
                 type = "?";
                 break;
         }
-        message = "" + systemTime + " " + "Trap Notification: " + name + " value " + type + " " + value + " " + oidString;
+        message = "" + systemTime + ":" + name + ":" + type + ":" + value + ":" + oidString;
         byte[] output;
         byte[] iv = Crypto.generateIV(0, 16);
+        
         output = iv;
         output = Byte.concat(output, Crypto.AESCBCencrypt(message.getBytes(), key, iv));
         String s = "";
@@ -158,29 +159,9 @@ public class TrapHandler extends Thread
             return this.user;
         }
         
-        public void setUser(User user)
-        {
-            this.user = user;
-        }
-        
         public OID getOID()
         {
             return oid;
-        }
-        
-        public void setOID(OID oid)
-        {
-            this.oid = oid;
-        }
-        
-        public int getType()
-        {
-            return type;
-        }
-        
-        public void setType(int type)
-        {
-            this.type = type;
         }
         
         public String getValue()
@@ -188,19 +169,9 @@ public class TrapHandler extends Thread
             return value;
         }
         
-        public void setValue(String value)
-        {
-            this.value = value;
-        }
-        
         public String getHost()
         {
             return host;
-        }
-        
-        public void setHost(String host)
-        {
-            this.host = host;
         }
         
         public int conditionOccured()

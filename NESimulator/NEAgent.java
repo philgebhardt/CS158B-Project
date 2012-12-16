@@ -68,7 +68,7 @@ public class NEAgent extends Thread
 	        
 	        try
 	        {
-	            serverSocket = new ServerSocket(4447);
+	            serverSocket = new ServerSocket(4444);
 	        }
 	        catch(IOException e)
 	        {
@@ -224,18 +224,4 @@ public class NEAgent extends Thread
 	        return children;
 	    }
 	}
-	
-	/**
-	private User authenticate(String username)
-	{
-	    if(users.containsKey(username))
-	    {
-	        return users.get(username);
-	    }
-	    else
-	    {
-	        return null;
-	    }
-	}
-	**/
 }

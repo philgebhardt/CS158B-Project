@@ -31,6 +31,7 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.WindowConstants;
 
+@SuppressWarnings("serial")
 public class Client extends JFrame{
 	
 	char newline = '\n';
@@ -132,7 +133,7 @@ public class Client extends JFrame{
         
         try
         {
-            serverSocket = new ServerSocket(4444);
+            serverSocket = new ServerSocket(4445);
             System.out.println("Server is listening...");
             clientSocket = serverSocket.accept();
             out = clientSocket.getOutputStream();
@@ -182,18 +183,7 @@ public class Client extends JFrame{
             System.exit(-1);
         }
 	}
-	private byte[] copy(byte[] a, int offset, int len)
-	{
-	    byte[] rv = new byte[len];
-	    for(int i = 0; i < len; i++) rv[i] = a[offset + i];
-	    return rv;
-	}
-	private byte[] copy(byte[] a, int offset)
-    {
-        byte[] rv = new byte[a.length - offset];
-        for(int i = 0; i < a.length - offset; i++) rv[i] = a[offset + i];
-        return rv;
-    }
+
 	private void setFrame()
 	{	
 	    setSize(850, 500);
@@ -414,7 +404,7 @@ public class Client extends JFrame{
         try
         {
         	
-            echoSocket = new Socket(ipString, 4445);
+            echoSocket = new Socket(ipString, 4444);
             out = echoSocket.getOutputStream();
             in = echoSocket.getInputStream();
 		    out.write(command);
