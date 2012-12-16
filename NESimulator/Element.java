@@ -6,6 +6,17 @@ import java.util.concurrent.locks.Lock;
 
 import Structure.*;
 
+/**
+ * The Element class is responsible for simulating a live
+ * network element, in this case a network router. The
+ * simulation includes randomly inserting, removing, and
+ * modifying elements of this simulated router's TCP
+ * connection table.
+ * 
+ * @author Philip Gebhardt
+ * @version Fall 2012, CS158B
+ * 
+ */
 public class Element extends Thread
 {
     static final long REFRESH_RATE = 200; //200 milliseconds
@@ -39,6 +50,12 @@ public class Element extends Thread
         return lock;
     }
 
+    /**
+     * This method returns all of this Element instance's
+     * simulation data within a OrderedTree<OID>
+     * 
+     * @return instance data encapsulated in an OrderedTree<OID>
+     */
     public OrderedTree<OID> agentData()
     {
         LinkedList<OrderedTree<OID>> tcpList = new LinkedList<OrderedTree<OID>>();
@@ -56,6 +73,12 @@ public class Element extends Thread
         return new OrderedTree<OID>(new OID("ROOT"), rootList);
     }
 
+    /**
+     * The objective of this method is to continually introduce 
+     * random events into the NESimulator. This method achieves 
+     * this by random insertions, deletions, and modifications 
+     * to the Element instance's data field.
+     */
     @Override
     public void run()
     {
@@ -77,6 +100,12 @@ public class Element extends Thread
 
     }
 
+    /**
+     * Probabilistically adds a randomly generated TCP 
+     * connection to this instance's data field 
+     * approximately 1 out of every 4 times this method 
+     * is properly called.
+     */
     void probabilisticInsertion()
     {
         int p;
@@ -90,6 +119,13 @@ public class Element extends Thread
         }
     }
 
+    /**
+     * Probabilistically removes randomly selected TCP 
+     * connections from this instance's data field.
+     * When this method is called, every TCP connection
+     * with a status of FIN_WAIT, LISTEN, or CLOSED has
+     * a 5% chance of being removed from the data field.
+     */
     void probabilisticRemoval()
     {
         int p;
@@ -123,6 +159,13 @@ public class Element extends Thread
         }
     }
 
+    /**
+     * Probabilistically modifies elements within this Element
+     * instance's data field. Every modification is essentially 
+     * a logical progression between TCP connection states. 
+     * When this method is called, each element within the 
+     * instance's data has a 10% chance of being modified.
+     */
     void probabilisticModification()
     {
         int p, r;
@@ -165,6 +208,13 @@ public class Element extends Thread
         }
     }
 
+    /**
+     * Creates a randomly generated TCP connection 
+     * with a source and destination IP address pair, 
+     * a source and destination socket pair, and a 
+     * connection status.
+     * @return the OID that was generated.
+     */
     static OID createRandomTCP_OID()
     {
         int q1, q2, q3, q4, p, r;

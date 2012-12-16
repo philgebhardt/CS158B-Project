@@ -14,6 +14,17 @@ import Crypto.*;
 import Structure.*;
 import Structure.Byte;
 
+/**
+ * The NEAgent class is responsible for listening for requests
+ * from other entities within the network that this agent's
+ * NESimulator operates in. The NEAgent can handle
+ * get/set/walk/trap requests sent by a network manager, similar
+ * to SNMP requests.
+ * 
+ * @author Philip Gebhardt
+ * @version Fall 2012, CS158B
+ * 
+ */
 public class NEAgent extends Thread
 {
 	public static final int REQUEST_ARG = 0;
@@ -52,13 +63,24 @@ public class NEAgent extends Thread
 	    return lock;
 	}
 	
+	/**
+	 * The objective of this run method is to listen for
+	 * incoming requests to be handled and responded by this
+	 * NEAgent class. A large portion of this objective is
+	 * to ensure confidentiality and integrity by use of the
+	 * security package Crypto.
+	 */
 	@Override
 	public void run()
 	{
+	    /**
+	     * Initialize class that handles trap requests and events
+	     */
 	    trapHandler = new TrapHandler();
         trapHandler.setDaemon(true);
         trapHandler.giveLock(lock);
         trapHandler.start();
+        
 	    while(true)
 	    {
 	        serverSocket = null;
@@ -134,6 +156,17 @@ public class NEAgent extends Thread
 	    }
 	}
 	
+	/**
+	 * This process method parses input sent from a network
+	 * manager and determines the appropriate action for
+	 * the request represented by the input string, and
+	 * finally generates a response that can be returned to
+	 * the sender.
+	 * 
+	 * @param input - The request to be handled
+	 * @param user - The user which sent the request
+	 * @return the NEAgent instance's response 
+	 */
 	private String process(String input, User user)
 	{
 	    StringTokenizer st;
@@ -207,6 +240,17 @@ public class NEAgent extends Thread
         return outputLn;
 	}
 	
+	/**
+	 * This method traverses an OrderedTree<OID> node and
+	 * everything below it for OID name-value pairs.
+	 * The output of this method is similar to an SNMP walk
+	 * request.
+	 * 
+	 * @param parent - The starting point of the walk
+	 * traversal
+	 * @return String containing all the name-value pairs
+	 * delimited by the pipe (|) character.
+	 */
 	private String walk(OrderedTree<OID> parent)
 	{
 	    if(parent.getRootData().isLeaf())

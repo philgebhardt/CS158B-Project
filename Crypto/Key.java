@@ -1,7 +1,13 @@
 package Crypto;
 
-
-
+/**
+ * The Key class is an implementation of a symmetric key.
+ * Keys can be of arbitrary length, but must be an array of
+ * bytes.
+ * 
+ * @author Philip Gebhardt
+ * @version Fall 2012, CS158B
+ */
 public class Key
 {
 	private byte[] bytes;

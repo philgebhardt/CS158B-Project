@@ -22,6 +22,15 @@ import Structure.Byte;
 import Structure.OID;
 import Structure.User;
 
+/**
+ * The TrapHandler class is responsible for listening 
+ * and handling trap configuration requests. It is also 
+ * responsible for detecting trap events and sending 
+ * appropriate notifications.
+ * @author Philip Gebhardt
+ * @version Fall 2012, CS158B
+ *
+ */
 public class TrapHandler extends Thread
 {
     public static final int NOT_EQUAL = 0;
@@ -42,6 +51,12 @@ public class TrapHandler extends Thread
         lock = l;
     }
     
+    /**
+     * The objective of this run method is to continually 
+     * check for occurrences of configured trap events. 
+     * When this method detects a trap event occurrence, 
+     * this method calls upon the notification method.
+     */
     public void run()
     {
         while(true)
@@ -77,6 +92,23 @@ public class TrapHandler extends Thread
         }
     }
     
+    /**
+     * This method takes a trap event and creates a notification 
+     * message, indicating that the event associated with this 
+     * trap has occurred.
+     * 
+     * @param trap - trap to be notified on
+     * @param status - status type of the trap's event occurrence
+     * @throws UnknownHostException
+     * @throws IOException
+     * @throws InvalidKeyException
+     * @throws NoSuchAlgorithmException
+     * @throws NoSuchPaddingException
+     * @throws InvalidAlgorithmParameterException
+     * @throws ShortBufferException
+     * @throws IllegalBlockSizeException
+     * @throws BadPaddingException
+     */
     public static void sendTrapNotification(TrapContainer trap, int status) throws UnknownHostException, IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, ShortBufferException, IllegalBlockSizeException, BadPaddingException
     {
         System.out.println(trap.getHost());
@@ -137,6 +169,16 @@ public class TrapHandler extends Thread
         return traps.listIterator();
     }
     
+    /**
+     * TrapContainer is a simple container for all 
+     * associated trap information such as the 
+     * trap's event value and routines for 
+     * detecting whether or not the given trap has 
+     * occurred.
+     * @author Philip Gebhardt
+     * @version Fall 2012, CS158B
+     * 
+     */
     private class TrapContainer
     {
         private OID oid;
@@ -174,6 +216,10 @@ public class TrapHandler extends Thread
             return host;
         }
         
+        /**
+         * Configures a given trap to occurred status.
+         * @return the status of the trap
+         */
         public int conditionOccured()
         {
             int status = -1;

@@ -16,6 +16,16 @@ import java.util.concurrent.locks.Lock;
 import Crypto.Key;
 import Structure.*;
 
+/**
+ * This is the supervising class of the Element and
+ * NEAgent classes. The NESimulator is responsible
+ * for initializing configuration of both child
+ * classes as well as process command line input
+ * from a user.
+ * 
+ * @author Philip Gebhardt
+ * @version Fall 2012, CS158B
+ * */
 public class NESimulator
 {
     static NEAgent agent;
@@ -56,6 +66,12 @@ public class NESimulator
 		}
 	}
 	
+	/**
+	 * This method initializes the two child classes Element
+	 * and NEAgent. These classes are treated as threads and
+	 * so they must be initialized with shared memory and a
+	 * concurrency lock.
+	 */
 	public static void initializeThreads()
 	{
 	    //Initialize threads
@@ -85,6 +101,12 @@ public class NESimulator
         agent.start();
 	}
 	
+	/**
+	 * This method searches for a configuration file
+	 * that is used to load user and Crypto information.
+	 * After this method is called, the users list should
+	 * be filled with preloaded users.
+	 */
 	public static void pullConfigInfo()
 	{
 	    String line;
@@ -117,6 +139,12 @@ public class NESimulator
 	    }
 	}
 	
+	/**
+	 * Creates and returns a user with a given name.
+	 * 
+	 * @param input - name of the user to be created
+	 * @return a User instance with specified name
+	 */
 	public static User createUser(String input)
 	{
 	    StringTokenizer st;
@@ -138,6 +166,12 @@ public class NESimulator
 	    System.out.println("Agent stats under construction.");
 	}
 	
+	/**
+	 * Creates data structure for organizing the Element's system
+	 * information. The data structure used and passed by this
+	 * method is a LinkedList of type OrderedTree<OID>.
+	 * @return list of system information
+	 */
 	public static LinkedList<OrderedTree<OID>> listSystemInfo()
 	{
 	    LinkedList<OrderedTree<OID>> list = new LinkedList<OrderedTree<OID>>();
