@@ -1,13 +1,13 @@
 CS158B-Project
 ==============
-Within this software suite there are:\n
-	3 Device library packages\n
-		Client\n
-		NESimulator\n
-		RMON\n
-	2 Supplement library packages\n
-		Crypto\n
-		Structure\n
+Within this software suite there are:
+	3 Device library packages
+		Client
+		NESimulator
+		RMON
+	2 Supplement library packages
+		Crypto
+		Structure
 		
 Client
 This package contains all necessary classes to run the
