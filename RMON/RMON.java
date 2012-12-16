@@ -11,8 +11,10 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
+import java.util.concurrent.locks.Lock;
 
 import Crypto.Key;
+import Structure.MyLock;
 import Structure.User;
 
 public class RMON
@@ -20,14 +22,26 @@ public class RMON
     static HashMap<String, Alarm> alarms;
     static HashMap<String, User> users;
     static ClientSideComm client;
+    static AgentSideComm agent;
+    static Lock lock;
     
     public static void main(String args[])
     {
+        lock = new MyLock();
         pullConfigInfo();
         alarms = new HashMap<String, Alarm>();
+        
         client = new ClientSideComm(users, alarms);
+        agent = new AgentSideComm(users, alarms);
+        
+        client.giveLock(lock);
+        agent.giveLock(lock);
+        
         client.setDaemon(true);
+        agent.setDaemon(true);
+        
         client.start();
+        agent.start();
         while(true);
     }
     
@@ -36,7 +50,7 @@ public class RMON
         String line;
         users = new HashMap<String, User>();
         FileSystem fs = FileSystems.getDefault();
-        Path configFile = fs.getPath("CONFIG.agent");
+        Path configFile = fs.getPath("CONFIG.rmon");
         
         try
         {

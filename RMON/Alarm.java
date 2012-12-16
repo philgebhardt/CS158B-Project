@@ -60,4 +60,19 @@ public class Alarm
     {
         threshold_crossed = false;
     }
+    
+    @Override
+    public String toString()
+    {
+        String action;
+        if(threshold_crossed)
+        {
+            action = "threshold crossed";
+        }
+        else
+        {
+            action = "threshold receeded";
+        }
+        return name + " " + action + " (" + threshold + ")";
+    }
 }

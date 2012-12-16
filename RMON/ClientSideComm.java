@@ -5,13 +5,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.StringTokenizer;
+import java.util.concurrent.locks.Lock;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -19,6 +19,7 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.ShortBufferException;
 
 import Crypto.Crypto;
+import Crypto.Key;
 import NESimulator.TrapHandler;
 import Structure.Byte;
 import Structure.User;
@@ -27,16 +28,31 @@ public class ClientSideComm extends Thread
 {
     HashMap<String, Alarm> alarms;
     HashMap<String, User> users;
+    
     ServerSocket serverSocket;
     Socket clientSocket;
-    InputStream in;
-    OutputStream out;
+    Socket agentSocket;
+    
+    InputStream clientIn;
+    InputStream agentIn;
+    OutputStream clientOut;
+    OutputStream agentOut;
+    
+    Lock lock;
+    
+    String srcIp, destIp;
+    
+    User user;
     
     public ClientSideComm(HashMap<String, User> users, HashMap<String, Alarm> alarms)
     {
-        super();
         this.alarms = alarms;
         this.users = users;
+    }
+    
+    public void giveLock(Lock l)
+    {
+        lock = l;
     }
     
     public void run()
@@ -45,74 +61,71 @@ public class ClientSideComm extends Thread
         {
             try
             {
-                serverSocket = new ServerSocket(4445);
-                clientSocket = serverSocket.accept();
-                in = clientSocket.getInputStream();
-                out = clientSocket.getOutputStream();
+                byte[] input;
+                boolean is_trap;
                 
-                Socket agentSocket = null;
-                InputStream inAgent = null;
-                OutputStream outAgent = null;
+                input = serveClient();
                 
-                byte[] input, output, iv;
-                String name, destIp, srcIp, processed;
-                srcIp = clientSocket.getInetAddress().toString().substring(1);
-                input = new byte[1000];
-                int totalBytes = in.read(input);
-                name = new String(input);
-                name = name.substring(0, name.indexOf(' '));
+                while(lock.tryLock() == false);
+                is_trap = proccess(new String(input));
+                lock.unlock();
                 
-                iv = Byte.copy(input, name.length() + 1, 16);
-                destIp = new String(Byte.copy(input, name.length() + 16 + 1 + 1));
-                destIp = destIp.substring(0, destIp.indexOf(' '));
-                
-                input = Byte.copy(input, name.length() + 18 + destIp.length() + 1, totalBytes - (name.length() + 18 + destIp.length() + 1));
-                input = Crypto.AESCBCdecrypt(input, users.get(name).getKey(), iv);
-
-                boolean is_trap = proccess(new String(input), users.get(name), srcIp);
-                
-                iv = Crypto.generateIV(0, 16);
-                output = Crypto.AESCBCencrypt(input, users.get("RMON").getKey(), iv);
-                output = Byte.concat("RMON ".getBytes(), Byte.concat(iv, output));
-                
-                agentSocket = new Socket(destIp, 4447);
-                inAgent = agentSocket.getInputStream();
-                outAgent = agentSocket.getOutputStream();
-                outAgent.write(output);
-                input = new byte[1000];
-                totalBytes = inAgent.read(input);
-                
-                agentSocket.close();
-                inAgent.close();
-                outAgent.close();
-                
-                if(is_trap)
+                if(is_trap) //Set trap on agent
                 {
-                    //Do not forward response to client
+                    //Encrypt with RMON key and send to agent
+                    //Do not forward agent response to client
+                    byte[] response = agentInterface(input, users.get("RMON").getKey());
+                    //TODO: doSomethingWithResponse(response);
+                    System.out.println(new String(response));
                 }
-                else
+                else //Forward request
                 {
-                    iv = Byte.copy(input, 0, 16);
-                    output = Byte.copy(input, 16, totalBytes - 16);
-                    output = Crypto.AESCBCdecrypt(output, users.get("RMON").getKey(), iv);
-                    output = Crypto.AESCBCencrypt(output, users.get(name).getKey(), iv);
-                    output = Byte.concat(iv, output);
-                    out.write(output);
+                    //Encrypt with user key and sent to agent
+                    //Forward response from agent to client
+                    byte[] response = agentInterface(input, user.getKey());
+                    clientOut.write(response);
                 }
-                
-                serverSocket.close();
-                clientSocket.close();
-                in.close();
-                out.close();
-                
-            } catch (IOException | InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | InvalidAlgorithmParameterException | ShortBufferException | IllegalBlockSizeException | BadPaddingException e)
+                Thread.sleep(2000);
+                teardown();
+            } catch (Exception e)
             {
                 e.printStackTrace();
             }
         }
     }
     
-    private boolean proccess(String input, User user, String ipForward)
+    private byte[] serveClient() throws IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, ShortBufferException, IllegalBlockSizeException, BadPaddingException
+    {
+        byte[] input, iv;
+        String name;
+        int totalBytes, offset;
+        
+        serverSocket = new ServerSocket(4444);
+        clientSocket = serverSocket.accept();
+        clientIn = clientSocket.getInputStream();
+        clientOut = clientSocket.getOutputStream();
+        
+        srcIp = clientSocket.getInetAddress().toString().substring(1);
+        input = new byte[1000];
+        totalBytes = clientIn.read(input);
+                
+        name = new String(input);
+        name = name.substring(0, name.indexOf(' '));
+        user = users.get(name);
+        
+        offset = name.length() + 1;
+        iv = Byte.copy(input, offset, 16);
+        
+        offset += iv.length + 1;
+        destIp = new String(Byte.copy(input, offset));
+        destIp = destIp.substring(0, destIp.indexOf(' '));
+        
+        offset += destIp.length() + 1;
+        input = Byte.copy(input, offset, totalBytes - offset);
+        return Crypto.AESCBCdecrypt(input, user.getKey(), iv);
+    }
+    
+    private boolean proccess(String input)
     {
         StringTokenizer st = new StringTokenizer(input, " ");
         int n = st.countTokens();
@@ -130,7 +143,7 @@ public class ClientSideComm extends Thread
                 value = "";
                 for(i = 3; i < n; i++) value += args[i];
                 //Create alarm
-                Alarm alarm = new Alarm(user, ipForward, name, value, TrapHandler.trapType(type));
+                Alarm alarm = new Alarm(user, srcIp, name, value, TrapHandler.trapType(type));
                 //Add alarm to alarm list
                 alarms.put(alarm.getName(), alarm);
                 return true;
@@ -139,5 +152,40 @@ public class ClientSideComm extends Thread
                 break;
         }
         return false;
+    }
+    
+    private byte[] agentInterface(byte[] message, Key key) throws UnknownHostException, IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, ShortBufferException, IllegalBlockSizeException, BadPaddingException
+    {
+        int totalBytes;
+        byte[] iv;
+        byte[] input = new byte[1000];
+        agentSocket = new Socket(destIp, 4444);
+        agentIn = agentSocket.getInputStream();
+        agentOut = agentSocket.getOutputStream();
+        iv = Crypto.generateIV(0, 16);
+        
+        message = Crypto.AESCBCencrypt(message, key, iv);
+        agentOut.write(message);
+        totalBytes = agentIn.read(input);
+        
+        iv = Byte.copy(message, 0, 16);
+        message = Byte.copy(message, 16, totalBytes-16);
+        message = Crypto.AESCBCdecrypt(message, key, iv);
+        
+        //TODO: Logging goes here
+        System.out.println(new String(message));
+        
+        return message;
+    }
+    
+    private void teardown() throws IOException
+    {
+        serverSocket.close();
+        clientSocket.close();
+        agentSocket.close();
+        clientIn.close();
+        clientOut.close();
+        agentIn.close();
+        agentOut.close();
     }
 }
